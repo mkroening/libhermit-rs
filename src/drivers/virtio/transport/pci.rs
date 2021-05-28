@@ -533,17 +533,17 @@ impl ComCfg {
 	pub fn dev_features(&mut self) -> u64 {
 		// Indicate device to show high 32 bits in device_feature field.
 		// See Virtio specification v1.1. - 4.1.4.3
-		self.com_cfg.device_feature_select = 1;
+		unsafe { core::ptr::addr_of_mut!(self.com_cfg.device_feature_select).write_volatile(1) }
 
 		// read high 32 bits of device features
-		let mut dev_feat = u64::from(self.com_cfg.device_feature) << 32;
+		let mut dev_feat = u64::from(unsafe { core::ptr::addr_of_mut!(self.com_cfg.device_feature).read_volatile() }) << 32;
 
 		// Indicate device to show low 32 bits in device_feature field.
 		// See Virtio specification v1.1. - 4.1.4.3
-		self.com_cfg.device_feature_select = 0;
+		unsafe { core::ptr::addr_of_mut!(self.com_cfg.device_feature_select).write_volatile(0) }
 
 		// read low 32 bits of device features
-		dev_feat |= u64::from(self.com_cfg.device_feature);
+		dev_feat |= u64::from(unsafe { core::ptr::addr_of_mut!(self.com_cfg.device_feature).read_volatile() });
 
 		dev_feat
 	}
