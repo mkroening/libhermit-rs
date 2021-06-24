@@ -189,6 +189,12 @@ pub extern "C" fn sys_clone(id: *mut Tid, func: extern "C" fn(usize), arg: usize
 }
 
 fn __sys_yield() {
+	#[repr(C, packed)]
+	struct Foo {
+		a: u64,
+		b: u8,
+	}
+	core::hint::black_box(Foo { a: 0, b: 0 });
 	core_scheduler().reschedule();
 }
 
