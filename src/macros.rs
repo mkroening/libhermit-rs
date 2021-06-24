@@ -47,12 +47,11 @@ macro_rules! switch_to_kernel {
 		unsafe {
 			let user_stack_pointer;
 			// Store the user stack pointer and switch to the kernel stack
-			// FIXME: Actually switch stacks https://github.com/hermitcore/libhermit-rs/issues/234
 			asm!(
 				"mov {}, rsp",
-				// "mov rsp, {}",
+				"mov rsp, {}",
 				out(reg) user_stack_pointer,
-				// in(reg) percore::get_kernel_stack(),
+				in(reg) percore::get_kernel_stack(),
 				options(nomem, preserves_flags),
 			);
 			percore::core_scheduler().set_current_user_stack(VirtAddr(user_stack_pointer));
@@ -93,12 +92,11 @@ macro_rules! kernel_function {
 			irq::disable();
 			let user_stack_pointer;
 			// Store the user stack pointer and switch to the kernel stack
-			// FIXME: Actually switch stacks https://github.com/hermitcore/libhermit-rs/issues/234
 			asm!(
 				"mov {}, rsp",
-				// "mov rsp, {}",
+				"mov rsp, {}",
 				out(reg) user_stack_pointer,
-				// in(reg) get_kernel_stack(),
+				in(reg) percore::get_kernel_stack(),
 				options(nomem, preserves_flags),
 			);
 			percore::core_scheduler().set_current_user_stack(VirtAddr(user_stack_pointer));
