@@ -347,8 +347,6 @@ pub struct Task {
 	pub prio: Priority,
 	/// Last stack pointer before a context switch to another task
 	pub last_stack_pointer: VirtAddr,
-	/// Last stack pointer on the user stack before jumping to kernel space
-	pub user_stack_pointer: VirtAddr,
 	/// Last FPU state before a context switch to another task using the FPU
 	pub last_fpu_state: arch::processor::FPUState,
 	/// ID of the core this task is running on
@@ -388,7 +386,6 @@ impl Task {
 			status: task_status,
 			prio: task_prio,
 			last_stack_pointer: VirtAddr(0u64),
-			user_stack_pointer: VirtAddr(0u64),
 			last_fpu_state: arch::processor::FPUState::new(),
 			core_id,
 			stacks: TaskStacks::new(stack_size),
@@ -409,7 +406,6 @@ impl Task {
 			status: TaskStatus::Idle,
 			prio: IDLE_PRIO,
 			last_stack_pointer: VirtAddr(0u64),
-			user_stack_pointer: VirtAddr(0u64),
 			last_fpu_state: arch::processor::FPUState::new(),
 			core_id,
 			stacks: TaskStacks::from_boot_stacks(),
@@ -430,7 +426,6 @@ impl Task {
 			status: TaskStatus::Ready,
 			prio: task.prio,
 			last_stack_pointer: VirtAddr(0u64),
-			user_stack_pointer: VirtAddr(0u64),
 			last_fpu_state: arch::processor::FPUState::new(),
 			core_id,
 			stacks: task.stacks.clone(),

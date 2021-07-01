@@ -397,12 +397,12 @@ impl TaskFrame for Task {
 
 			// Set the task's stack pointer entry to the stack we have just crafted.
 			self.last_stack_pointer = stack;
-			self.user_stack_pointer = self.stacks.get_user_stack()
+			let user_stack_pointer = self.stacks.get_user_stack()
 				+ self.stacks.get_user_stack_size()
 				- TaskStacks::MARKER_SIZE;
 
 			// rdx is required to intialize the stack
-			(*state).rdx = self.user_stack_pointer.as_u64() - mem::size_of::<u64>() as u64;
+			(*state).rdx = user_stack_pointer.as_u64() - mem::size_of::<u64>() as u64;
 		}
 	}
 }
