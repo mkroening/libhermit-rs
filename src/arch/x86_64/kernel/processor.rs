@@ -977,7 +977,7 @@ pub fn shutdown() -> ! {
 			);
 		}
 	}
-	outl(0xf4, 0);
+	outl(0xf4, 0x10);
 	loop {}
 }
 
