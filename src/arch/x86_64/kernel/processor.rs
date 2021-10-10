@@ -967,18 +967,8 @@ pub fn shutdown() -> ! {
 	acpi::poweroff();
 
 	// assume that we running on Qemu
-	fn outl(io_base: u16, code: u32) {
-		unsafe {
-			asm!(
-				"out dx, eax",
-				in("dx") io_base,
-				in("eax") code,
-				options(nomem, nostack)
-			);
-		}
-	}
-	outl(0xf4, 0x10);
-	loop {}
+	let exit_handler = qemu_exit::X86::new(0xf4, 3);
+	exit_handler.exit_success()
 }
 
 pub fn get_timer_ticks() -> u64 {
