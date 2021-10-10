@@ -106,4 +106,5 @@ jobs:
             -device isa-debug-exit,iobase=0xf4,iosize=0x04 \
             -append "-freq $FREQ" \
             || qemu_status=$?
+          echo "qemu_status = $qemu_status"
           test $qemu_status -eq 3
