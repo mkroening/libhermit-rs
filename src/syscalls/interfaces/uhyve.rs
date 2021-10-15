@@ -15,6 +15,7 @@ use x86::io::*;
 use crate::arch;
 use crate::arch::mm::paging;
 use crate::arch::mm::{PhysAddr, VirtAddr};
+use crate::ffi::c_char;
 use crate::syscalls::interfaces::SyscallInterface;
 #[cfg(feature = "newlib")]
 use crate::syscalls::lwip::sys_lwip_get_errno;
@@ -190,14 +191,14 @@ impl SysLseek {
 pub struct Uhyve;
 
 impl SyscallInterface for Uhyve {
-	fn open(&self, name: *const u8, flags: i32, mode: i32) -> i32 {
+	fn open(&self, name: *const c_char, flags: i32, mode: i32) -> i32 {
 		let mut sysopen = SysOpen::new(VirtAddr(name as u64), flags, mode);
 		uhyve_send(UHYVE_PORT_OPEN, &mut sysopen);
 
 		sysopen.ret
 	}
 
-	fn unlink(&self, name: *const u8) -> i32 {
+	fn unlink(&self, name: *const c_char) -> i32 {
 		let mut sysunlink = SysUnlink::new(VirtAddr(name as u64));
 		uhyve_send(UHYVE_PORT_UNLINK, &mut sysunlink);
 

@@ -16,7 +16,7 @@ use crate::arch;
 use crate::console::CONSOLE;
 use crate::environment;
 use crate::errno::*;
-use crate::ffi::CStr;
+use crate::ffi::{CStr, c_char};
 use crate::syscalls::fs::{self, FilePerms, PosixFile, SeekWhence};
 
 pub use self::generic::*;
@@ -201,14 +201,14 @@ pub trait SyscallInterface: Send + Sync {
 	}
 
 	#[cfg(not(target_arch = "x86_64"))]
-	fn unlink(&self, _name: *const u8) -> i32 {
+	fn unlink(&self, _name: *const c_char) -> i32 {
 		debug!("unlink is unimplemented, returning -ENOSYS");
 		-ENOSYS
 	}
 
 	#[cfg(target_arch = "x86_64")]
-	fn unlink(&self, name: *const u8) -> i32 {
-		let name = unsafe { CStr::from_ptr(name as _) }.to_str().unwrap();
+	fn unlink(&self, name: *const c_char) -> i32 {
+		let name = unsafe { CStr::from_ptr(name) }.to_str().unwrap();
 		debug!("unlink {}", name);
 
 		fs::FILESYSTEM
@@ -219,13 +219,13 @@ pub trait SyscallInterface: Send + Sync {
 	}
 
 	#[cfg(not(target_arch = "x86_64"))]
-	fn open(&self, _name: *const u8, _flags: i32, _mode: i32) -> i32 {
+	fn open(&self, _name: *const c_char, _flags: i32, _mode: i32) -> i32 {
 		debug!("open is unimplemented, returning -ENOSYS");
 		-ENOSYS
 	}
 
 	#[cfg(target_arch = "x86_64")]
-	fn open(&self, name: *const u8, flags: i32, mode: i32) -> i32 {
+	fn open(&self, name: *const c_char, flags: i32, mode: i32) -> i32 {
 		//! mode is 0x777 (0b0111_0111_0111), when flags | O_CREAT, else 0
 		//! flags is bitmask of O_DEC_* defined above.
 		//! (taken from rust stdlib/sys hermit target )
