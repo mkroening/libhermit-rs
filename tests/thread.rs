@@ -1,4 +1,5 @@
 #![feature(test)]
+#![feature(thread_local)]
 #![no_std]
 #![no_main]
 #![test_runner(common::test_case_runner)]
@@ -38,6 +39,16 @@ pub fn thread_test() {
 	for child in children {
 		sys_join(child);
 	}
+}
+
+#[test_case]
+pub fn test_thread_local() {
+	const CONST: u8 = 0x42;
+
+    #[thread_local]
+    static THREAD_LOCAL: u8 = CONST;
+
+    assert_eq!(THREAD_LOCAL, CONST);
 }
 
 #[no_mangle]
