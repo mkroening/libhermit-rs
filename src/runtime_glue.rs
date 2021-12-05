@@ -31,19 +31,6 @@ fn panic(info: &PanicInfo<'_>) -> ! {
 	}
 }
 
-#[alloc_error_handler]
-fn rust_oom(layout: Layout) -> ! {
-	println!(
-		"[{}][!!!OOM!!!] Memory allocation of {} bytes failed",
-		arch::percore::core_id(),
-		layout.size()
-	);
-
-	loop {
-		arch::processor::halt();
-	}
-}
-
 #[cfg(target_os = "hermit")]
 #[no_mangle]
 pub unsafe extern "C" fn __rg_oom(size: usize, align: usize) -> ! {

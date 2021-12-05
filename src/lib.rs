@@ -26,7 +26,7 @@
 #![feature(specialization)]
 #![feature(nonnull_slice_from_raw_parts)]
 #![feature(core_intrinsics)]
-#![feature(alloc_error_handler)]
+#![feature(default_alloc_error_handler)]
 #![feature(vec_into_raw_parts)]
 #![feature(drain_filter)]
 #![feature(llvm_asm)]
