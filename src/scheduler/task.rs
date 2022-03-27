@@ -62,35 +62,67 @@ impl fmt::Display for TaskId {
 	}
 }
 
-/// Priority of a task
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy)]
+/// The priority of a task.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Priority(u8);
 
 impl Priority {
-	pub const fn into(self) -> u8 {
-		self.0
+	pub const COUNT: u8 = 31;
+
+	pub const IDLE: Self = unsafe { Self::new_unchecked(0) };
+	pub const LOW: Self = unsafe { Self::new_unchecked(1) };
+	pub const NORMAL: Self = unsafe { Self::new_unchecked(2) };
+	pub const HIGH: Self = unsafe { Self::new_unchecked(3) };
+
+	/// Creates a priority without checking the value.
+	///
+	/// # Safety
+	///
+	/// The value must be smaller than [`Priority::::COUNT`].
+	pub const unsafe fn new_unchecked(n: u8) -> Self {
+		Self(n)
 	}
 
-	pub const fn from(x: u8) -> Self {
-		Priority(x)
+	/// Creates a priority if the given value is smaller than `Priority::COUNT`.
+	pub const fn new(n: u8) -> Option<Self> {
+		if n < Self::COUNT {
+			Some(Self(n))
+		} else {
+			None
+		}
+	}
+
+	/// Returns the value as a primitive type.
+	pub const fn get(self) -> u8 {
+		self.0
+	}
+}
+
+impl Default for Priority {
+	fn default() -> Self {
+		Self::NORMAL
+	}
+}
+
+impl From<Priority> for u8 {
+	fn from(priority: Priority) -> Self {
+		priority.0
+	}
+}
+
+impl TryFrom<u8> for Priority {
+	type Error = &'static str;
+
+	fn try_from(value: u8) -> Result<Self, Self::Error> {
+		Self::new(value).ok_or("Priority only accepts value smaller than the number of priorities!")
 	}
 }
 
 impl fmt::Display for Priority {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f, "{}", self.0)
+		self.get().fmt(f)
 	}
 }
-
-#[allow(dead_code)]
-pub const HIGH_PRIO: Priority = Priority::from(3);
-pub const NORMAL_PRIO: Priority = Priority::from(2);
-#[allow(dead_code)]
-pub const LOW_PRIO: Priority = Priority::from(1);
-pub const IDLE_PRIO: Priority = Priority::from(0);
-
-/// Maximum number of priorities
-pub const NO_PRIORITIES: usize = 31;
 
 #[derive(Copy, Clone, Debug)]
 pub struct TaskHandle {
@@ -143,7 +175,7 @@ impl Eq for TaskHandle {}
 
 /// Realize a priority queue for task handles
 pub struct TaskHandlePriorityQueue {
-	queues: [Option<VecDeque<TaskHandle>>; NO_PRIORITIES],
+	queues: [Option<VecDeque<TaskHandle>>; Priority::COUNT as usize],
 	prio_bitmap: u64,
 }
 
@@ -162,8 +194,8 @@ impl TaskHandlePriorityQueue {
 
 	/// Add a task handle by its priority to the queue
 	pub fn push(&mut self, task: TaskHandle) {
-		let i = task.priority.into() as usize;
-		//assert!(i < NO_PRIORITIES, "Priority {} is too high", i);
+		let i = task.priority.get() as usize;
+		//assert!(i < Priority::COUNT as usize, "Priority {} is too high", i);
 
 		self.prio_bitmap |= (1 << i) as u64;
 		if let Some(queue) = &mut self.queues[i] {
@@ -200,8 +232,8 @@ impl TaskHandlePriorityQueue {
 
 	/// Remove a specific task handle from the priority queue.
 	pub fn remove(&mut self, task: TaskHandle) {
-		let queue_index = task.priority.into() as usize;
-		//assert!(queue_index < NO_PRIORITIES, "Priority {} is too high", queue_index);
+		let queue_index = task.priority.get() as usize;
+		//assert!(queue_index < Priority::COUNT as usize, "Priority {} is too high", queue_index);
 
 		if let Some(queue) = &mut self.queues[queue_index] {
 			let mut i = 0;
@@ -237,7 +269,7 @@ impl QueueHead {
 
 /// Realize a priority queue for tasks
 pub struct PriorityTaskQueue {
-	queues: [QueueHead; NO_PRIORITIES],
+	queues: [QueueHead; Priority::COUNT as usize],
 	prio_bitmap: u64,
 }
 
@@ -246,15 +278,15 @@ impl PriorityTaskQueue {
 	pub const fn new() -> PriorityTaskQueue {
 		const QUEUE_HEAD: QueueHead = QueueHead::new();
 		PriorityTaskQueue {
-			queues: [QUEUE_HEAD; NO_PRIORITIES],
+			queues: [QUEUE_HEAD; Priority::COUNT as usize],
 			prio_bitmap: 0,
 		}
 	}
 
 	/// Add a task by its priority to the queue
 	pub fn push(&mut self, task: Rc<RefCell<Task>>) {
-		let i = task.borrow().prio.into() as usize;
-		//assert!(i < NO_PRIORITIES, "Priority {} is too high", i);
+		let i = task.borrow().prio.get() as usize;
+		//assert!(i < Priority::COUNT as usize, "Priority {} is too high", i);
 
 		self.prio_bitmap |= (1 << i) as u64;
 		match self.queues[i].tail {
@@ -318,7 +350,7 @@ impl PriorityTaskQueue {
 	/// Pop the next task, which has a higher or the same priority as `prio`
 	pub fn pop_with_prio(&mut self, prio: Priority) -> Option<Rc<RefCell<Task>>> {
 		if let Some(i) = msb(self.prio_bitmap) {
-			if i >= prio.into().try_into().unwrap() {
+			if i >= prio.get().try_into().unwrap() {
 				return self.pop_from_queue(i as usize);
 			}
 		}
@@ -329,9 +361,9 @@ impl PriorityTaskQueue {
 	/// Returns the highest priority of all available task
 	pub fn get_highest_priority(&self) -> Priority {
 		if let Some(i) = msb(self.prio_bitmap) {
-			Priority::from(i.try_into().unwrap())
+			Priority::new(i.try_into().unwrap()).unwrap()
 		} else {
-			IDLE_PRIO
+			Priority::IDLE
 		}
 	}
 }
@@ -411,7 +443,7 @@ impl Task {
 		Task {
 			id: tid,
 			status: TaskStatus::Idle,
-			prio: IDLE_PRIO,
+			prio: Priority::IDLE,
 			last_stack_pointer: VirtAddr(0u64),
 			user_stack_pointer: VirtAddr(0u64),
 			last_fpu_state: arch::processor::FPUState::new(),

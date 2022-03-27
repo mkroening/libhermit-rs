@@ -35,7 +35,7 @@ extern "C" fn __sys_getprio(id: *const Tid) -> i32 {
 	let task = core_scheduler().get_current_task_handle();
 
 	if id.is_null() || unsafe { *id } == task.get_id().into() {
-		i32::from(task.get_priority().into())
+		task.get_priority().get().into()
 	} else {
 		-EINVAL
 	}
@@ -235,8 +235,8 @@ extern "C" fn __sys_spawn2(
 		selector as u32
 	};
 
-	scheduler::PerCoreScheduler::spawn(func, arg, Priority::from(prio), core_id, stack_size).into()
-		as Tid
+	scheduler::PerCoreScheduler::spawn(func, arg, Priority::new(prio).unwrap(), core_id, stack_size)
+		.into() as Tid
 }
 
 #[no_mangle]

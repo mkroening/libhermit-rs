@@ -368,7 +368,13 @@ fn boot_processor_main() -> ! {
 	info!("Compiled with SMP support");
 
 	// Start the initd task.
-	scheduler::PerCoreScheduler::spawn(initd, 0, scheduler::task::NORMAL_PRIO, 0, USER_STACK_SIZE);
+	scheduler::PerCoreScheduler::spawn(
+		initd,
+		0,
+		scheduler::task::Priority::NORMAL,
+		0,
+		USER_STACK_SIZE,
+	);
 
 	let core_scheduler = core_scheduler();
 	// Run the scheduler loop.
