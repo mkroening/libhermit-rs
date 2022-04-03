@@ -93,75 +93,76 @@ pub(crate) fn get_application_parameters() -> (i32, *const *const u8, *const *co
 	unsafe { SYS.get_application_parameters() }
 }
 
-#[allow(improper_ctypes_definitions)]
-extern "C" fn __sys_get_mac_address() -> Result<[u8; 6], ()> {
-	unsafe { SYS.get_mac_address() }
+extern "C" fn __sys_get_mac_address(mac_address: &mut [u8; 6]) -> i32 {
+	*mac_address = try_sys!(unsafe { SYS.get_mac_address() }.map_err(|()| "get_mac_address failed"));
+	0
 }
 
 #[no_mangle]
-pub fn sys_get_mac_address() -> Result<[u8; 6], ()> {
-	kernel_function!(__sys_get_mac_address())
+pub extern "C" fn sys_get_mac_address(mac_address: &mut [u8; 6]) -> i32 {
+	kernel_function!(__sys_get_mac_address(mac_address))
 }
 
-#[allow(improper_ctypes_definitions)]
-extern "C" fn __sys_get_mtu() -> Result<u16, ()> {
-	unsafe { SYS.get_mtu() }
-}
-
-#[no_mangle]
-pub fn sys_get_mtu() -> Result<u16, ()> {
-	kernel_function!(__sys_get_mtu())
-}
-
-extern "C" fn __sys_get_tx_buffer(len: usize, ret: &mut Result<(*mut u8, usize), ()>) {
-	*ret = unsafe { SYS.get_tx_buffer(len) };
-}
-
-#[allow(improper_ctypes_definitions)]
-extern "C" fn __sys_free_tx_buffer(handle: usize) -> Result<(), ()> {
-	unsafe { SYS.free_tx_buffer(handle) }
+extern "C" fn __sys_get_mtu(mtu: &mut u16) -> i32 {
+	*mtu = try_sys!(unsafe { SYS.get_mtu() }.map_err(|()| "get_mut failed"));
+	0
 }
 
 #[no_mangle]
-pub fn sys_free_tx_buffer(handle: usize) -> Result<(), ()> {
+pub extern "C" fn sys_get_mtu(mtu: &mut u16) -> i32 {
+	kernel_function!(__sys_get_mtu(mtu))
+}
+
+extern "C" fn __sys_get_tx_buffer(len: usize, data: &mut *mut u8, transfer: &mut usize) -> i32 {
+	(*data, *transfer) = try_sys!(unsafe { SYS.get_tx_buffer(len) }.map_err(|()| "get_tx_buffer failed"));
+	0
+}
+
+extern "C" fn __sys_free_tx_buffer(handle: usize) -> i32 {
+	try_sys!(unsafe { SYS.free_tx_buffer(handle) }.map_err(|()| "free_tx_buffer failed"));
+	0
+}
+
+#[no_mangle]
+pub extern "C" fn sys_free_tx_buffer(handle: usize) -> i32 {
 	kernel_function!(__sys_free_tx_buffer(handle))
 }
 
 #[no_mangle]
-pub fn sys_get_tx_buffer(len: usize) -> Result<(*mut u8, usize), ()> {
-	let mut ret = Err(());
-	kernel_function!(__sys_get_tx_buffer(len, &mut ret));
-	ret
+pub extern "C" fn sys_get_tx_buffer(len: usize, data: &mut *mut u8, transfer: &mut usize) -> i32 {
+	kernel_function!(__sys_get_tx_buffer(len, data, transfer))
 }
 
-#[allow(improper_ctypes_definitions)]
-extern "C" fn __sys_send_tx_buffer(handle: usize, len: usize) -> Result<(), ()> {
-	unsafe { SYS.send_tx_buffer(handle, len) }
+extern "C" fn __sys_send_tx_buffer(handle: usize, len: usize) -> i32 {
+	try_sys!(unsafe { SYS.send_tx_buffer(handle, len) }.map_err(|()| "send_tx_buffer failed"));
+	0
 }
 
 #[no_mangle]
-pub fn sys_send_tx_buffer(handle: usize, len: usize) -> Result<(), ()> {
+pub extern "C" fn sys_send_tx_buffer(handle: usize, len: usize) -> i32 {
 	kernel_function!(__sys_send_tx_buffer(handle, len))
 }
 
-extern "C" fn __sys_receive_rx_buffer(ret: &mut Result<(&'static [u8], usize), ()>) {
-	*ret = unsafe { SYS.receive_rx_buffer() };
+extern "C" fn __sys_receive_rx_buffer(data: &mut *const u8, data_length: &mut usize, transfer: &mut usize) -> i32 {
+	let (data_src, transfer_src) = try_sys!(unsafe { SYS.receive_rx_buffer() }.map_err(|()| "receive_rx_buffer failed"));
+	*data = data_src.as_ptr();
+	*data_length = data_src.len();
+	*transfer = transfer_src;
+	0
 }
 
 #[no_mangle]
-pub fn sys_receive_rx_buffer() -> Result<(&'static [u8], usize), ()> {
-	let mut ret = Err(());
-	kernel_function!(__sys_receive_rx_buffer(&mut ret));
-	ret
+pub extern "C" fn sys_receive_rx_buffer(data: &mut *const u8, data_length: &mut usize, transfer: &mut usize) -> i32 {
+	kernel_function!(__sys_receive_rx_buffer(data, data_length, transfer))
 }
 
-#[allow(improper_ctypes_definitions)]
-extern "C" fn __sys_rx_buffer_consumed(handle: usize) -> Result<(), ()> {
-	unsafe { SYS.rx_buffer_consumed(handle) }
+extern "C" fn __sys_rx_buffer_consumed(handle: usize) -> i32 {
+	try_sys!(unsafe { SYS.rx_buffer_consumed(handle) }.map_err(|()| "rx_buffer_consumed failed"));
+	0
 }
 
 #[no_mangle]
-pub fn sys_rx_buffer_consumed(handle: usize) -> Result<(), ()> {
+pub extern "C" fn sys_rx_buffer_consumed(handle: usize) -> i32 {
 	kernel_function!(__sys_rx_buffer_consumed(handle))
 }
 
