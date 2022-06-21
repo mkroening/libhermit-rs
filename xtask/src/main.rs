@@ -147,6 +147,11 @@ impl flags::Build {
 				"init_lwip",
 				"lwip_read",
 				"lwip_write",
+				// lwIP rtl8139 driver
+				"init_rtl8139_netif",
+				"irq_install_handler",
+				"virt_to_phys",
+				"eoi",
 			]
 			.into_iter();
 
