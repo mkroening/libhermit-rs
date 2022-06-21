@@ -112,6 +112,12 @@ macro_rules! kernel_function {
 	};
 }
 
+macro_rules! kernel_function_dummy {
+	($f:ident($($x:tt)*)) => {{
+		$f($($x)*)
+	}};
+}
+
 #[cfg(target_arch = "aarch64")]
 macro_rules! kernel_function {
 	($f:ident($($x:tt)*)) => {{

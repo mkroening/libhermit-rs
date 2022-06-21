@@ -17,7 +17,7 @@ extern "C" fn __sys_sem_init(sem: *mut *mut Semaphore, value: u32) -> i32 {
 
 #[no_mangle]
 pub extern "C" fn sys_sem_init(sem: *mut *mut Semaphore, value: u32) -> i32 {
-	kernel_function!(__sys_sem_init(sem, value))
+	kernel_function_dummy!(__sys_sem_init(sem, value))
 }
 
 extern "C" fn __sys_sem_destroy(sem: *mut Semaphore) -> i32 {
@@ -35,7 +35,7 @@ extern "C" fn __sys_sem_destroy(sem: *mut Semaphore) -> i32 {
 
 #[no_mangle]
 pub extern "C" fn sys_sem_destroy(sem: *mut Semaphore) -> i32 {
-	kernel_function!(__sys_sem_destroy(sem))
+	kernel_function_dummy!(__sys_sem_destroy(sem))
 }
 
 extern "C" fn __sys_sem_post(sem: *const Semaphore) -> i32 {
@@ -51,7 +51,7 @@ extern "C" fn __sys_sem_post(sem: *const Semaphore) -> i32 {
 
 #[no_mangle]
 pub extern "C" fn sys_sem_post(sem: *const Semaphore) -> i32 {
-	kernel_function!(__sys_sem_post(sem))
+	kernel_function_dummy!(__sys_sem_post(sem))
 }
 
 extern "C" fn __sys_sem_trywait(sem: *const Semaphore) -> i32 {
@@ -70,7 +70,7 @@ extern "C" fn __sys_sem_trywait(sem: *const Semaphore) -> i32 {
 
 #[no_mangle]
 pub extern "C" fn sys_sem_trywait(sem: *const Semaphore) -> i32 {
-	kernel_function!(__sys_sem_trywait(sem))
+	kernel_function_dummy!(__sys_sem_trywait(sem))
 }
 
 extern "C" fn __sys_sem_timedwait(sem: *const Semaphore, ms: u32) -> i32 {
@@ -91,7 +91,7 @@ extern "C" fn __sys_sem_timedwait(sem: *const Semaphore, ms: u32) -> i32 {
 
 #[no_mangle]
 pub extern "C" fn sys_sem_timedwait(sem: *const Semaphore, ms: u32) -> i32 {
-	kernel_function!(__sys_sem_timedwait(sem, ms))
+	kernel_function_dummy!(__sys_sem_timedwait(sem, ms))
 }
 
 extern "C" fn __sys_sem_cancelablewait(sem: *const Semaphore, ms: u32) -> i32 {
@@ -100,5 +100,5 @@ extern "C" fn __sys_sem_cancelablewait(sem: *const Semaphore, ms: u32) -> i32 {
 
 #[no_mangle]
 pub extern "C" fn sys_sem_cancelablewait(sem: *const Semaphore, ms: u32) -> i32 {
-	kernel_function!(__sys_sem_cancelablewait(sem, ms))
+	kernel_function_dummy!(__sys_sem_cancelablewait(sem, ms))
 }
