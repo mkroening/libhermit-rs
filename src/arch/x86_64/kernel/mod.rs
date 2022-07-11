@@ -1,6 +1,7 @@
 use alloc::collections::BTreeMap;
 #[cfg(feature = "newlib")]
 use core::slice;
+use core::sync::atomic::{Ordering, AtomicU32, AtomicBool, self};
 
 use hermit_entry::{BootInfo, RawBootInfo};
 use x86::controlregs::{cr0, cr0_write, cr4, Cr0};
@@ -143,7 +144,7 @@ pub fn get_mbinfo() -> VirtAddr {
 
 #[cfg(feature = "smp")]
 pub fn get_processor_count() -> u32 {
-	raw_boot_info().load_cpu_online()
+	CPU_ONLINE.load(Ordering::Acquire)
 }
 
 #[cfg(not(feature = "smp"))]
@@ -331,9 +332,13 @@ fn finish_processor_init() {
 		apic::init_next_processor_variables(core_id() + 1);
 	}
 
+	info!("finish");
 	// This triggers apic::boot_application_processors (bare-metal/QEMU) or uhyve
 	// to initialize the next processor.
 	raw_boot_info().increment_cpu_online();
+	atomic::fence(Ordering::SeqCst);
+	MAY_ENTER.store(true, Ordering::Release);
+	CPU_ONLINE.fetch_add(1, Ordering::Release);
 }
 
 pub fn print_statistics() {
@@ -356,6 +361,9 @@ pub fn print_statistics() {
 	}
 }
 
+pub static MAY_ENTER: AtomicBool = AtomicBool::new(true);
+static CPU_ONLINE: AtomicU32 = AtomicU32::new(0);
+
 #[cfg(target_os = "none")]
 #[inline(never)]
 #[no_mangle]
@@ -373,9 +381,11 @@ unsafe fn pre_init(boot_info: *const RawBootInfo) -> ! {
 		BOOT_INFO = Some(BootInfo::copy_from(boot_info));
 	}
 
-	if boot_info.load_cpu_online() == 0 {
+	if CPU_ONLINE.load(Ordering::Acquire) == 0 {
+		atomic::fence(Ordering::SeqCst);
 		crate::boot_processor_main()
 	} else {
+		atomic::fence(Ordering::SeqCst);
 		#[cfg(not(feature = "smp"))]
 		{
 			error!("SMP support deactivated");
