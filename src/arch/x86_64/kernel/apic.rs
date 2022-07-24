@@ -73,11 +73,13 @@ const SPURIOUS_INTERRUPT_NUMBER: u8 = 127;
 const SMP_BOOT_CODE_ADDRESS: VirtAddr = VirtAddr(0x8000);
 
 #[cfg(feature = "smp")]
-const SMP_BOOT_CODE_OFFSET_PML4: usize = 0x18;
-#[cfg(feature = "smp")]
 const SMP_BOOT_CODE_OFFSET_ENTRY: usize = 0x08;
 #[cfg(feature = "smp")]
-const SMP_BOOT_CODE_OFFSET_BOOTINFO: usize = 0x10;
+const SMP_BOOT_CODE_OFFSET_CPU_ID: usize = 0x10;
+#[cfg(feature = "smp")]
+const SMP_BOOT_CODE_OFFSET_BOOTINFO: usize = 0x14;
+#[cfg(feature = "smp")]
+const SMP_BOOT_CODE_OFFSET_PML4: usize = 0x1C;
 
 const X2APIC_ENABLE: u64 = 1 << 10;
 
@@ -818,6 +820,10 @@ pub fn boot_application_processors() {
 
 	for (core_id_to_boot, &apic_id) in apic_ids.iter().enumerate() {
 		if core_id_to_boot != core_id.try_into().unwrap() {
+			unsafe {
+				*((SMP_BOOT_CODE_ADDRESS + SMP_BOOT_CODE_OFFSET_CPU_ID).as_mut_ptr()) =
+					core_id_to_boot as u32; // TODO typeof coreid without cast
+			}
 			let destination = u64::from(apic_id) << 32;
 
 			debug!(
