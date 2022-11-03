@@ -227,12 +227,22 @@ pub fn unmap<S: PageSize>(virtual_address: VirtAddr, count: usize) {
 		count
 	);
 
-	map::<S>(
-		virtual_address,
-		PhysAddr::zero(),
-		count,
-		PageTableEntryFlags::empty(),
-	);
+	let first_page = Page::<S>::containing_address(x86_64::VirtAddr::new(virtual_address.0));
+	let last_page = first_page + count as u64;
+	let range = Page::range(first_page, last_page);
+
+	for page in range {
+		match S::SIZE {
+			Size4KiB::SIZE => {
+				let page = Page::<Size4KiB>::from_start_address(page.start_address()).unwrap();
+				unsafe {
+					let (_frame, flush) = recursive_page_table().unmap(page).unwrap();
+					flush.flush();
+				}
+			}
+			_ => unimplemented!(),
+		}
+	}
 }
 
 #[cfg(feature = "acpi")]
