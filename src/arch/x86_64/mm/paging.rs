@@ -1,3 +1,4 @@
+use core::fmt::Debug;
 use core::ptr;
 
 use x86_64::instructions::tlb;
@@ -197,7 +198,11 @@ unsafe fn recursive_page_table() -> RecursivePageTable<'static> {
 	}
 }
 
-pub fn unmap<S: PageSize>(virtual_address: VirtAddr, count: usize) {
+pub fn unmap<S>(virtual_address: VirtAddr, count: usize)
+where
+	S: PageSize + Debug,
+	RecursivePageTable<'static>: Mapper<S>,
+{
 	trace!(
 		"Unmapping virtual address {:#X} ({} pages)",
 		virtual_address,
@@ -209,23 +214,16 @@ pub fn unmap<S: PageSize>(virtual_address: VirtAddr, count: usize) {
 	let range = Page::range(first_page, last_page);
 
 	for page in range {
-		match S::SIZE {
-			Size4KiB::SIZE => {
-				let page = Page::<Size4KiB>::from_start_address(page.start_address()).unwrap();
-				unsafe {
-					let (_frame, flush) = recursive_page_table().unmap(page).unwrap();
-					flush.flush();
-				}
-			}
-			_ => unimplemented!(),
-		}
+		let mut page_table = unsafe { recursive_page_table() };
+		let (_frame, flush) = page_table.unmap(page).unwrap();
+		flush.flush();
 	}
 }
 
 #[cfg(feature = "acpi")]
 pub fn identity_map<S>(frame: PhysFrame<S>)
 where
-	S: PageSize + core::fmt::Debug,
+	S: PageSize + Debug,
 	RecursivePageTable<'static>: Mapper<S>,
 {
 	assert!(
