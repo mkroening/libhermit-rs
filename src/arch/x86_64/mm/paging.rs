@@ -57,6 +57,15 @@ pub use x86_64::structures::paging::Size1GiB as HugePageSize;
 pub use x86_64::structures::paging::Size2MiB as LargePageSize;
 pub use x86_64::structures::paging::Size4KiB as BasePageSize;
 
+unsafe fn recursive_page_table() -> RecursivePageTable<'static> {
+	let level_4_table_addr = 0xFFFF_FFFF_FFFF_F000;
+	let level_4_table_ptr = ptr::from_exposed_addr_mut(level_4_table_addr);
+	unsafe {
+		let level_4_table = &mut *(level_4_table_ptr);
+		RecursivePageTable::new(level_4_table).unwrap()
+	}
+}
+
 /// Translate a virtual memory address to a physical one.
 pub fn virtual_to_physical(virtual_address: VirtAddr) -> Option<PhysAddr> {
 	use x86_64::structures::paging::mapper::Translate;
@@ -141,12 +150,27 @@ where
 	}
 }
 
-unsafe fn recursive_page_table() -> RecursivePageTable<'static> {
-	let level_4_table_addr = 0xFFFF_FFFF_FFFF_F000;
-	let level_4_table_ptr = ptr::from_exposed_addr_mut(level_4_table_addr);
+#[cfg(feature = "acpi")]
+pub fn identity_map<S>(frame: PhysFrame<S>)
+where
+	S: PageSize + Debug,
+	RecursivePageTable<'static>: Mapper<S>,
+{
+	assert!(
+		frame.start_address().as_u64() < mm::kernel_start_address().0,
+		"Address {:#X} to be identity-mapped is not below Kernel start address",
+		frame.start_address()
+	);
+
 	unsafe {
-		let level_4_table = &mut *(level_4_table_ptr);
-		RecursivePageTable::new(level_4_table).unwrap()
+		recursive_page_table()
+			.identity_map(
+				frame,
+				PageTableEntryFlags::PRESENT | PageTableEntryFlags::NO_EXECUTE,
+				&mut physicalmem::FrameAlloc,
+			)
+			.unwrap()
+			.flush();
 	}
 }
 
@@ -169,30 +193,6 @@ where
 		let mut page_table = unsafe { recursive_page_table() };
 		let (_frame, flush) = page_table.unmap(page).unwrap();
 		flush.flush();
-	}
-}
-
-#[cfg(feature = "acpi")]
-pub fn identity_map<S>(frame: PhysFrame<S>)
-where
-	S: PageSize + Debug,
-	RecursivePageTable<'static>: Mapper<S>,
-{
-	assert!(
-		frame.start_address().as_u64() < mm::kernel_start_address().0,
-		"Address {:#X} to be identity-mapped is not below Kernel start address",
-		frame.start_address()
-	);
-
-	unsafe {
-		recursive_page_table()
-			.identity_map(
-				frame,
-				PageTableEntryFlags::PRESENT | PageTableEntryFlags::NO_EXECUTE,
-				&mut physicalmem::FrameAlloc,
-			)
-			.unwrap()
-			.flush();
 	}
 }
 
