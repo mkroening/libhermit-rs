@@ -3,7 +3,7 @@ use core::ptr;
 
 use x86_64::instructions::tlb;
 use x86_64::structures::paging::{
-	Mapper, Page, PageTableIndex, PhysFrame, RecursivePageTable, Size1GiB, Size2MiB, Size4KiB,
+	Mapper, Page, PageTableIndex, PhysFrame, RecursivePageTable, Size2MiB, Size4KiB,
 };
 
 #[cfg(feature = "smp")]
@@ -123,12 +123,15 @@ pub extern "C" fn virt_to_phys(virtual_address: VirtAddr) -> PhysAddr {
 /// * `physical_address` - First physical address to map these pages to
 /// * `flags` - Flags from PageTableEntryFlags to set for the page table entry (e.g. WRITABLE or NO_EXECUTE).
 ///             The PRESENT flags is set automatically.
-pub fn map<S: PageSize>(
+pub fn map<S>(
 	virtual_address: VirtAddr,
 	physical_address: PhysAddr,
 	count: usize,
 	flags: PageTableEntryFlags,
-) {
+) where
+	S: PageSize + Debug,
+	RecursivePageTable<'static>: Mapper<S>,
+{
 	let pages = {
 		let start = Page::<S>::containing_address(x86_64::VirtAddr::new(virtual_address.0));
 		let end = start + count as u64;
@@ -146,42 +149,15 @@ pub fn map<S: PageSize>(
 	trace!("Mapping {pages:?} to {frames:?} with {flags:?}");
 
 	for (page, frame) in pages.zip(frames) {
-		match S::SIZE {
-			Size4KiB::SIZE => {
-				let page = Page::<Size4KiB>::from_start_address(page.start_address()).unwrap();
-				let frame = PhysFrame::from_start_address(frame.start_address()).unwrap();
-				unsafe {
-					// TODO: Require explicit unmaps
-					if let Ok((_frame, flush)) = recursive_page_table().unmap(page) {
-						flush.flush();
-					}
-					recursive_page_table()
-						.map_to(page, frame, flags, &mut physicalmem::FrameAlloc)
-						.unwrap()
-						.flush();
-				}
+		unsafe {
+			// TODO: Require explicit unmaps
+			if let Ok((_frame, flush)) = recursive_page_table().unmap(page) {
+				flush.flush();
 			}
-			Size2MiB::SIZE => {
-				let page = Page::<Size2MiB>::from_start_address(page.start_address()).unwrap();
-				let frame = PhysFrame::from_start_address(frame.start_address()).unwrap();
-				unsafe {
-					recursive_page_table()
-						.map_to(page, frame, flags, &mut physicalmem::FrameAlloc)
-						.unwrap()
-						.flush();
-				}
-			}
-			Size1GiB::SIZE => {
-				let page = Page::<Size1GiB>::from_start_address(page.start_address()).unwrap();
-				let frame = PhysFrame::from_start_address(frame.start_address()).unwrap();
-				unsafe {
-					recursive_page_table()
-						.map_to(page, frame, flags, &mut physicalmem::FrameAlloc)
-						.unwrap()
-						.flush();
-				}
-			}
-			_ => unreachable!(),
+			recursive_page_table()
+				.map_to(page, frame, flags, &mut physicalmem::FrameAlloc)
+				.unwrap()
+				.flush();
 		}
 	}
 
@@ -189,7 +165,11 @@ pub fn map<S: PageSize>(
 	apic::ipi_tlb_flush();
 }
 
-pub fn map_heap<S: PageSize>(virt_addr: VirtAddr, count: usize) {
+pub fn map_heap<S: PageSize>(virt_addr: VirtAddr, count: usize)
+where
+	S: PageSize + Debug,
+	RecursivePageTable<'static>: Mapper<S>,
+{
 	let flags = {
 		let mut flags = PageTableEntryFlags::empty();
 		flags.normal().writable().execute_disable();
