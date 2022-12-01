@@ -2,6 +2,7 @@
 
 #[cfg(feature = "newlib")]
 use hermit_sync::InterruptTicketMutex;
+use hermit_sync::Lazy;
 
 pub use self::condvar::*;
 pub use self::futex::*;
@@ -41,7 +42,13 @@ const LWIP_FD_BIT: i32 = 1 << 30;
 #[cfg(feature = "newlib")]
 pub static LWIP_LOCK: InterruptTicketMutex<()> = InterruptTicketMutex::new(());
 
-pub(crate) static mut SYS: &'static dyn SyscallInterface = &interfaces::Generic;
+pub(crate) static SYS: Lazy<&'static dyn SyscallInterface> = Lazy::new(|| {
+	if env::is_uhyve() {
+		&interfaces::Uhyve
+	} else {
+		&interfaces::Generic
+	}
+});
 
 /// Shuts down the machine.
 ///
@@ -55,16 +62,10 @@ pub(crate) fn shutdown(arg: i32) -> ! {
 }
 
 pub(crate) fn init() {
-	unsafe {
-		// We know that HermitCore has successfully initialized a network interface.
-		// Now check if we can load a more specific SyscallInterface to make use of networking.
-		if env::is_uhyve() {
-			SYS = &interfaces::Uhyve;
-		}
+	Lazy::force(&SYS);
 
-		// Perform interface-specific initialization steps.
-		SYS.init();
-	}
+	// Perform interface-specific initialization steps.
+	SYS.init();
 
 	random_init();
 	#[cfg(feature = "newlib")]
@@ -90,14 +91,14 @@ pub extern "C" fn sys_free(ptr: *mut u8, size: usize, align: usize) {
 }
 
 pub(crate) fn get_application_parameters() -> (i32, *const *const u8, *const *const u8) {
-	unsafe { SYS.get_application_parameters() }
+	SYS.get_application_parameters()
 }
 
 pub(crate) extern "C" fn __sys_shutdown(arg: i32) -> ! {
 	// print some performance statistics
 	crate::arch::kernel::print_statistics();
 
-	unsafe { SYS.shutdown(arg) }
+	SYS.shutdown(arg)
 }
 
 #[no_mangle]
@@ -106,7 +107,7 @@ pub extern "C" fn sys_shutdown(arg: i32) -> ! {
 }
 
 extern "C" fn __sys_unlink(name: *const u8) -> i32 {
-	unsafe { SYS.unlink(name) }
+	SYS.unlink(name)
 }
 
 #[no_mangle]
@@ -115,7 +116,7 @@ pub extern "C" fn sys_unlink(name: *const u8) -> i32 {
 }
 
 extern "C" fn __sys_open(name: *const u8, flags: i32, mode: i32) -> i32 {
-	unsafe { SYS.open(name, flags, mode) }
+	SYS.open(name, flags, mode)
 }
 
 #[no_mangle]
@@ -124,7 +125,7 @@ pub extern "C" fn sys_open(name: *const u8, flags: i32, mode: i32) -> i32 {
 }
 
 extern "C" fn __sys_close(fd: i32) -> i32 {
-	unsafe { SYS.close(fd) }
+	SYS.close(fd)
 }
 
 #[no_mangle]
@@ -133,7 +134,7 @@ pub extern "C" fn sys_close(fd: i32) -> i32 {
 }
 
 extern "C" fn __sys_read(fd: i32, buf: *mut u8, len: usize) -> isize {
-	unsafe { SYS.read(fd, buf, len) }
+	SYS.read(fd, buf, len)
 }
 #[no_mangle]
 pub extern "C" fn sys_read(fd: i32, buf: *mut u8, len: usize) -> isize {
@@ -141,7 +142,7 @@ pub extern "C" fn sys_read(fd: i32, buf: *mut u8, len: usize) -> isize {
 }
 
 extern "C" fn __sys_write(fd: i32, buf: *const u8, len: usize) -> isize {
-	unsafe { SYS.write(fd, buf, len) }
+	SYS.write(fd, buf, len)
 }
 
 #[no_mangle]
@@ -150,7 +151,7 @@ pub extern "C" fn sys_write(fd: i32, buf: *const u8, len: usize) -> isize {
 }
 
 extern "C" fn __sys_lseek(fd: i32, offset: isize, whence: i32) -> isize {
-	unsafe { SYS.lseek(fd, offset, whence) }
+	SYS.lseek(fd, offset, whence)
 }
 
 #[no_mangle]
@@ -159,7 +160,7 @@ pub extern "C" fn sys_lseek(fd: i32, offset: isize, whence: i32) -> isize {
 }
 
 extern "C" fn __sys_stat(file: *const u8, st: usize) -> i32 {
-	unsafe { SYS.stat(file, st) }
+	SYS.stat(file, st)
 }
 
 #[no_mangle]
