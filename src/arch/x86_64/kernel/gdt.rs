@@ -95,7 +95,9 @@ pub fn add_current_core() {
 	// Allocate all ISTs for this core.
 	// Every task later gets its own IST1, so the IST1 allocated here is only used by the Idle task.
 	for i in 0..IST_ENTRIES {
+		debug!("ist {i}");
 		let ist = crate::mm::allocate(KERNEL_STACK_SIZE, true);
+		debug!("virt_addr = {ist:p}");
 		boxed_tss.ist[i] = ist.as_u64() + KERNEL_STACK_SIZE as u64 - TaskStacks::MARKER_SIZE as u64;
 	}
 

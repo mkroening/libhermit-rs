@@ -5,6 +5,9 @@ use multiboot::information::Multiboot;
 use x86::controlregs;
 use x86::irq::PageFaultError;
 use x86::tlb;
+use x86_64::structures::paging::{
+	Mapper, PhysFrame, RecursivePageTable, Size1GiB, Size2MiB, Size4KiB,
+};
 
 #[cfg(feature = "smp")]
 use crate::arch::x86_64::kernel::apic;
@@ -579,6 +582,8 @@ pub extern "C" fn virt_to_phys(virtual_address: VirtAddr) -> PhysAddr {
 	virtual_to_physical(virtual_address)
 }
 
+static LOG: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
+
 /// Maps a continuous range of pages.
 ///
 /// # Arguments
@@ -606,14 +611,95 @@ pub fn map<S: PageSize>(
 	let mut send_ipi = false;
 
 	for page in range {
+		// send_ipi |= map_page::<S>(page, current_physical_address, flags);
 		send_ipi |= root_pagetable.map_page::<S>(page, current_physical_address, flags);
 		current_physical_address += S::SIZE;
+		if page.virtual_address.0 == 0x1a5a000 {
+			println!("FOO");
+			LOG.store(true, core::sync::atomic::Ordering::Relaxed);
+			unsafe { 
+				// print_page_tables(4);
+				// panic!();
+			}
+
+		}
 	}
 
-	if send_ipi {
+	debug!("1");
+	// if send_ipi {
 		#[cfg(feature = "smp")]
 		apic::ipi_tlb_flush();
+	// }
+	debug!("2");
+}
+
+unsafe fn level_4_table() -> &'static mut x86_64::structures::paging::PageTable {
+	unsafe { &mut *(PML4_ADDRESS.as_mut_ptr() as *mut x86_64::structures::paging::PageTable) }
+}
+
+unsafe fn recursive_page_table() -> RecursivePageTable<'static> {
+	unsafe { RecursivePageTable::new(level_4_table()).unwrap() }
+}
+
+fn map_page<S: PageSize>(page: Page<S>, phys_addr: PhysAddr, flags: PageTableEntryFlags) -> bool {
+	use x86_64::{
+		structures::paging::{Page, PageSize},
+		PhysAddr, VirtAddr,
+	};
+
+	trace!(
+		"Mapping {} to {phys_addr:p} ({}) with {flags:?}",
+		page.address(),
+		S::SIZE
+	);
+
+	let flags = flags
+		| PageTableEntryFlags::PRESENT
+		| PageTableEntryFlags::ACCESSED
+		| PageTableEntryFlags::DIRTY;
+
+	match S::SIZE {
+		Size4KiB::SIZE => {
+			let page =
+				Page::<Size4KiB>::from_start_address(VirtAddr::new(page.address().0)).unwrap();
+			let frame = PhysFrame::from_start_address(PhysAddr::new(phys_addr.0)).unwrap();
+			unsafe {
+				// TODO: Require explicit unmaps
+				if let Ok((_frame, flush)) = recursive_page_table().unmap(page) {
+					flush.flush();
+				}
+				recursive_page_table()
+					.map_to(page, frame, flags, &mut physicalmem::FrameAlloc)
+					.unwrap()
+					.flush();
+			}
+		}
+		Size2MiB::SIZE => {
+			let page =
+				Page::<Size2MiB>::from_start_address(VirtAddr::new(page.address().0)).unwrap();
+			let frame = PhysFrame::from_start_address(PhysAddr::new(phys_addr.0)).unwrap();
+			unsafe {
+				recursive_page_table()
+					.map_to(page, frame, flags, &mut physicalmem::FrameAlloc)
+					.unwrap()
+					.flush();
+			}
+		}
+		Size1GiB::SIZE => {
+			let page =
+				Page::<Size1GiB>::from_start_address(VirtAddr::new(page.address().0)).unwrap();
+			let frame = PhysFrame::from_start_address(PhysAddr::new(phys_addr.0)).unwrap();
+			unsafe {
+				recursive_page_table()
+					.map_to(page, frame, flags, &mut physicalmem::FrameAlloc)
+					.unwrap()
+					.flush();
+			}
+		}
+		_ => unreachable!(),
 	}
+
+	true
 }
 
 pub fn unmap<S: PageSize>(virtual_address: VirtAddr, count: usize) {
@@ -708,4 +794,80 @@ pub fn init_page_tables() {
 			);
 		}
 	}
+}
+
+#[allow(dead_code)]
+unsafe fn disect(virt_addr: x86_64::VirtAddr) {
+	use x86_64::structures::paging::{
+		mapper::{MappedFrame, TranslateResult},
+		Translate, Page
+	};
+	use x86_64::structures::paging::{Size1GiB, Size4KiB};
+
+	let recursive_page_table = unsafe { recursive_page_table() };
+
+	match recursive_page_table.translate(virt_addr) {
+		TranslateResult::Mapped {
+			frame,
+			offset,
+			flags,
+		} => {
+			let phys_addr = frame.start_address() + offset;
+			println!("virt_addr: {virt_addr:p}, phys_addr: {phys_addr:p}, flags: {flags:?}");
+			match frame {
+				MappedFrame::Size4KiB(_) => {
+					let page = Page::<Size4KiB>::containing_address(virt_addr);
+					println!(
+						"p4: {}, p3: {}, p2: {}, p1: {}",
+						u16::from(page.p4_index()),
+						u16::from(page.p3_index()),
+						u16::from(page.p2_index()),
+						u16::from(page.p1_index())
+					);
+				}
+				MappedFrame::Size2MiB(_) => {
+					let page = Page::<Size2MiB>::containing_address(virt_addr);
+					println!(
+						"p4: {}, p3: {}, p2: {}",
+						u16::from(page.p4_index()),
+						u16::from(page.p3_index()),
+						u16::from(page.p2_index()),
+					);
+				}
+				MappedFrame::Size1GiB(_) => {
+					let page = Page::<Size1GiB>::containing_address(virt_addr);
+					println!(
+						"p4: {}, p3: {}",
+						u16::from(page.p4_index()),
+						u16::from(page.p3_index()),
+					);
+				}
+			}
+		}
+		TranslateResult::NotMapped => todo!(),
+		TranslateResult::InvalidFrameAddress(_) => todo!(),
+	}
+}
+
+#[allow(dead_code)]
+unsafe fn print_page_tables(levels: usize) {
+	assert!((1..=4).contains(&levels));
+
+	fn print(table: &x86_64::structures::paging::PageTable, level: usize, min_level: usize) {
+		for (i, entry) in table.iter().filter(|entry| !entry.is_unused()).enumerate() {
+			let indent = &"        "[0..2 * (4 - level)];
+			println!("{indent}L{level} Entry {i}: {entry:?}",);
+
+			if level > min_level && !entry.flags().contains(PageTableEntryFlags::HUGE_PAGE) {
+				let phys = entry.frame().unwrap().start_address();
+				let virt = x86_64::VirtAddr::new(phys.as_u64());
+				let entry_table = unsafe { &*virt.as_mut_ptr() };
+
+				print(entry_table, level - 1, min_level);
+			}
+		}
+	}
+
+	let mut recursive_page_table = unsafe { recursive_page_table() };
+	print(recursive_page_table.level_4_table(), 4, 5 - levels);
 }
