@@ -239,6 +239,7 @@ pub fn output_message_buf(buf: &[u8]) {
 pub fn boot_processor_init() {
 	processor::detect_features();
 	processor::configure();
+	percore::measure();
 
 	if cfg!(feature = "vga") && !env::is_uhyve() {
 		#[cfg(feature = "vga")]
@@ -292,6 +293,7 @@ pub fn boot_application_processors() {
 pub fn application_processor_init() {
 	percore::init();
 	processor::configure();
+	percore::measure();
 	gdt::add_current_core();
 	interrupts::load_idt();
 	apic::init_x2apic();

@@ -741,6 +741,7 @@ pub fn init_next_processor_variables(core_id: CoreId) {
 	// Keep the stack executable to possibly support dynamically generated code on the stack (see https://security.stackexchange.com/a/47825).
 	let stack = mm::allocate(KERNEL_STACK_SIZE, true);
 	let mut boxed_percore = Box::new(CachePadded::new(PerCoreInnerVariables::new(core_id)));
+	boxed_percore.this = &mut **boxed_percore;
 	let boxed_irq = Box::new(IrqStatistics::new());
 	let boxed_irq_raw = Box::into_raw(boxed_irq);
 
