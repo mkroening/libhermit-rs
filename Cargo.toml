@@ -48,7 +48,7 @@ name = "measure_startup_time"
 harness = false
 
 [features]
-default = ["pci", "pci-ids", "acpi", "fsgsbase", "smp", "tcp", "dhcpv4"]
+default = ["pci", "pci-ids", "acpi", "fsgsbase", "smp", "tcp", "dhcpv4", "vga"]
 vga = []
 newlib = []
 pci = ["num-derive"]
