@@ -49,7 +49,7 @@ harness = false
 
 [features]
 default = ["pci", "pci-ids", "acpi", "fsgsbase", "smp", "tcp", "dhcpv4", "vga"]
-vga = ["vcell"]
+vga = ["vga-text-mode"]
 newlib = []
 pci = ["num-derive"]
 acpi = []
@@ -108,7 +108,7 @@ features = [
 multiboot = "0.8"
 time = { version = "0.3", default-features = false }
 uart_16550 = "0.2"
-vcell = { version = "0.1", optional = true }
+vga-text-mode = { path = "../../vga-text-mode", optional = true }
 x86 = { version = "0.52", default-features = false }
 x86_64 = "0.14"
 
