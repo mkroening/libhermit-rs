@@ -197,6 +197,15 @@ pub fn init() {
 
 pub fn print(buf: &[u8]) {
 	if let Some(vga_screen) = VGA_SCREEN.get() {
-		vga_screen.lock().print(buf);
+		use vga::colors::{Color16, TextModeColor};
+		use vga::writers::{ScreenCharacter, TextWriter, Text80x25};
+
+		let text_mode = Text80x25::new();
+		let color = TextModeColor::new(Color16::Yellow, Color16::Black);
+		let screen_character = ScreenCharacter::new(b'T', color);
+
+		// text_mode.set_mode();
+		text_mode.clear_screen();
+		text_mode.write_character(0, 0, screen_character);
 	}
 }
