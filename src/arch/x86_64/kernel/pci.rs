@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use core::{fmt, u32, u8};
 
-use hermit_sync::{without_interrupts, InterruptTicketMutex};
+use hermit_sync::{without_interrupts, InterruptTicketMutex, OnceCell};
 use x86::io::*;
 
 use crate::arch::x86_64::mm::{PhysAddr, VirtAddr};
@@ -45,7 +45,7 @@ pub const PCI_MULTIFUNCTION_MASK: u32 = 0x0080_0000;
 
 pub const PCI_CAP_ID_VNDR: u32 = 0x09;
 
-static mut PCI_ADAPTERS: Vec<PciAdapter> = Vec::new();
+static PCI_ADAPTERS: OnceCell<&[PciAdapter]> = OnceCell::new();
 static mut PCI_DRIVERS: Vec<PciDriver> = Vec::new();
 
 #[derive(Clone, Debug)]
@@ -418,6 +418,7 @@ pub fn init() {
 	// HermitCore only uses PCI for network devices.
 	// Therefore, multifunction devices as well as additional bridges are not scanned.
 	// We also limit scanning to the first 32 buses.
+	let mut pci_adapters = Vec::new();
 	for bus in 0..PCI_MAX_BUS_NUMBER {
 		for device in 0..PCI_MAX_DEVICE_NUMBER {
 			let device_vendor_id = read_config(bus, device, PCI_ID_REGISTER);
@@ -426,13 +427,12 @@ pub fn init() {
 				let vendor_id = device_vendor_id as u16;
 				let adapter = PciAdapter::new(bus, device, vendor_id, device_id);
 				if let Some(adapter) = adapter {
-					unsafe {
-						PCI_ADAPTERS.push(adapter);
-					}
+					pci_adapters.push(adapter);
 				}
 			}
 		}
 	}
+	PCI_ADAPTERS.set(pci_adapters.leak()).unwrap();
 }
 
 pub fn init_drivers() {
@@ -440,11 +440,12 @@ pub fn init_drivers() {
 
 	// virtio: 4.1.2 PCI Device Discovery
 	without_interrupts(|| {
-		for adapter in unsafe {
-			PCI_ADAPTERS
-				.iter()
-				.filter(|x| x.vendor_id == 0x1AF4 && x.device_id >= 0x1000 && x.device_id <= 0x107F)
-		} {
+		for adapter in PCI_ADAPTERS
+			.get()
+			.unwrap()
+			.iter()
+			.filter(|x| x.vendor_id == 0x1AF4 && x.device_id >= 0x1000 && x.device_id <= 0x107F)
+		{
 			info!(
 				"Found virtio network device with device id {:#x}",
 				adapter.device_id
@@ -465,11 +466,10 @@ pub fn init_drivers() {
 		// do we already found a network interface?
 		if !nic_available {
 			// Searching for Realtek RTL8139, which is supported by Qemu
-			for adapter in unsafe {
-				PCI_ADAPTERS.iter().filter(|x| {
+			for adapter in
+				PCI_ADAPTERS.get().unwrap().iter().filter(|x| {
 					x.vendor_id == 0x10ec && x.device_id >= 0x8138 && x.device_id <= 0x8139
-				})
-			} {
+				}) {
 				info!(
 					"Found Realtek network device with device id {:#x}",
 					adapter.device_id
@@ -486,7 +486,7 @@ pub fn init_drivers() {
 pub fn print_information() {
 	infoheader!(" PCI BUS INFORMATION ");
 
-	for adapter in unsafe { PCI_ADAPTERS.iter() } {
+	for adapter in PCI_ADAPTERS.get().unwrap().iter() {
 		info!("{}", adapter);
 	}
 
