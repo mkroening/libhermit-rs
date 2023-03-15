@@ -77,6 +77,8 @@ struct DescrRing {
 	used_ring: UsedRing,
 }
 
+unsafe impl Send for DescrRing {}
+
 impl DescrRing {
 	fn push(&mut self, tkn: TransferToken) -> (Pinned<TransferToken>, u16, u16) {
 		let pin = Pinned::pin(tkn);

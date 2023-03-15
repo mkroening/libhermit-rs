@@ -1998,6 +1998,8 @@ struct MemDescr {
 	dealloc: Dealloc,
 }
 
+unsafe impl Send for MemDescr {}
+
 impl MemDescr {
 	/// Provides a handle to the given memory area by
 	/// giving a Box ownership to it.
@@ -2387,6 +2389,8 @@ pub struct Pinned<T> {
 	raw_ptr: *mut T,
 	_drop_inner: bool,
 }
+
+unsafe impl<T> Send for Pinned<T> {}
 
 impl<T: Sized> Pinned<T> {
 	/// Turns a `Pinned<T>` into a *mut T. Memory will remain valid.

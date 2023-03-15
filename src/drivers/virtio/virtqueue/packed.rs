@@ -5,6 +5,7 @@
 use alloc::boxed::Box;
 use alloc::collections::VecDeque;
 use alloc::rc::Rc;
+use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::cell::RefCell;
 use core::ptr;
@@ -102,6 +103,8 @@ struct DescriptorRing {
 	drv_wc: WrapCount,
 	dev_wc: WrapCount,
 }
+
+unsafe impl Send for DescriptorRing {}
 
 impl DescriptorRing {
 	fn new(size: u16) -> Self {
@@ -990,7 +993,7 @@ pub struct PackedVq {
 	notif_ctrl: NotifCtrl,
 	/// Memory pool controls the amount of "free floating" descriptors
 	/// See [MemPool](super.MemPool) docs for detail.
-	mem_pool: Rc<MemPool>,
+	mem_pool: Arc<MemPool>,
 	/// The size of the queue, equals the number of descriptors which can
 	/// be used
 	size: VqSize,

@@ -1,5 +1,5 @@
-use alloc::rc::Rc;
 use alloc::string::{String, ToString};
+use alloc::sync::Arc;
 use alloc::vec::Vec;
 
 use self::constants::{FeatureSet, Features};
@@ -35,7 +35,7 @@ pub struct VirtioFsDriver {
 	pub(super) com_cfg: ComCfg,
 	pub(super) isr_stat: IsrStatus,
 	pub(super) notif_cfg: NotifCfg,
-	pub(super) vqueues: Vec<Rc<Virtq>>,
+	pub(super) vqueues: Vec<Arc<Virtq>>,
 	pub(super) ready_queue: Vec<BufferToken>,
 	pub(super) irq: u8,
 }
@@ -132,14 +132,14 @@ impl VirtioFsDriver {
 				VqIndex::from(i),
 				self.dev_cfg.features.into(),
 			);
-			self.vqueues.push(Rc::new(vq));
+			self.vqueues.push(Arc::new(vq));
 		}
 
 		let cmd_spec = Some(BuffSpec::Single(Bytes::new(64 * 1024 + 128).unwrap()));
 		let rsp_spec = Some(BuffSpec::Single(Bytes::new(64 * 1024 + 128).unwrap()));
 
 		if let Ok(buff_tkn) =
-			self.vqueues[1].prep_buffer(Rc::clone(&self.vqueues[1]), cmd_spec, rsp_spec)
+			self.vqueues[1].prep_buffer(Arc::clone(&self.vqueues[1]), cmd_spec, rsp_spec)
 		{
 			self.ready_queue.push(buff_tkn);
 			// At this point the device is "live"

@@ -678,6 +678,9 @@ pub struct NotifCtrl {
 	notif_addr: *mut usize,
 }
 
+unsafe impl Send for NotifCtrl {}
+unsafe impl Sync for NotifCtrl {}
+
 impl NotifCtrl {
 	/// Returns a new controller. By default MSI-X capabilities and VIRTIO_F_NOTIFICATION_DATA
 	/// are disabled.

@@ -46,7 +46,7 @@ pub const PCI_MULTIFUNCTION_MASK: u32 = 0x0080_0000;
 pub const PCI_CAP_ID_VNDR: u32 = 0x09;
 
 static PCI_ADAPTERS: OnceCell<&[PciAdapter]> = OnceCell::new();
-static mut PCI_DRIVERS: Vec<PciDriver> = Vec::new();
+static PCI_DRIVERS: OnceCell<&[PciDriver]> = OnceCell::new();
 
 #[derive(Clone, Debug)]
 pub struct PciAdapter {
