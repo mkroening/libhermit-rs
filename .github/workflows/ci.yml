@@ -241,6 +241,7 @@ jobs:
   run-aarch64:
     name: Run RustyHermit (aarch64)
     runs-on: ubuntu-latest
+    container: registry.gitlab.com/qemu-project/qemu/qemu/ubuntu2204:latest
     steps:
       - name: Checkout rusty-hermit
         uses: actions/checkout@v3
