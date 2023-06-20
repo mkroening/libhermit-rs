@@ -241,7 +241,7 @@ jobs:
   run-aarch64:
     name: Run RustyHermit (aarch64)
     runs-on: ubuntu-latest
-    container: ubuntu:lunar
+    container: buildpack-deps:lunar
     steps:
       - name: Checkout rusty-hermit
         uses: actions/checkout@v3
