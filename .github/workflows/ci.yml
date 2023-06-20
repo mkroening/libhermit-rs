@@ -241,7 +241,7 @@ jobs:
   run-aarch64:
     name: Run RustyHermit (aarch64)
     runs-on: ubuntu-latest
-    container: registry.gitlab.com/qemu-project/qemu/qemu/ubuntu2204:latest
+    container: ubuntu:lunar
     steps:
       - name: Checkout rusty-hermit
         uses: actions/checkout@v3
@@ -256,6 +256,7 @@ jobs:
         with:
           repo: hermitcore/rusty-loader
           file: rusty-loader-aarch64
+      - uses: dtolnay/rust-toolchain@stable
       - name: Apply rust-toolchain.toml
         run: rustup show
       - name: Install QEMU
