@@ -76,3 +76,14 @@ pub(crate) extern "x86-interrupt" fn network_irqhandler(_stack_frame: ExceptionS
 
 	core_scheduler().reschedule();
 }
+
+#[cfg(target_arch = "riscv64")]
+pub fn network_irqhandler() {
+	debug!("Receive network interrupt");
+
+	// PLIC end of interrupt
+	crate::arch::kernel::interrupts::external_eoi();
+	let _ = _irqhandler();
+
+	core_scheduler().reschedule();
+}

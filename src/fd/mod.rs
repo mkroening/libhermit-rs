@@ -163,6 +163,13 @@ fn uhyve_send<T>(port: u16, data: &mut T) {
 	}
 }
 
+/// forward a request to the hypervisor uhyve
+#[inline]
+#[cfg(target_arch = "riscv64")]
+fn uhyve_send<T>(port: u16, data: &mut T) {
+	todo!()
+}
+
 fn open_flags_to_perm(flags: i32, mode: u32) -> FilePerms {
 	let mut perms = FilePerms {
 		raw: flags as u32,

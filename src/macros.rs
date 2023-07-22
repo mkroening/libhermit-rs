@@ -102,7 +102,10 @@ macro_rules! kernel_function {
 
 // TODO: Properly switch kernel stack with newlib
 // https://github.com/hermitcore/libhermit-rs/issues/471
-#[cfg(all(target_arch = "x86_64", feature = "newlib"))]
+#[cfg(any(
+	target_arch = "riscv64",
+	all(target_arch = "x86_64", feature = "newlib")
+))]
 macro_rules! kernel_function {
 	($f:ident($($x:tt)*)) => {{
 		$f($($x)*)
