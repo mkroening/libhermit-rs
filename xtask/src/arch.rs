@@ -6,6 +6,7 @@ use anyhow::anyhow;
 pub enum Arch {
 	X86_64,
 	AArch64,
+	Riscv64,
 }
 
 impl Arch {
@@ -13,6 +14,7 @@ impl Arch {
 		match self {
 			Self::X86_64 => "x86_64",
 			Self::AArch64 => "aarch64",
+			Self::Riscv64 => "riscv64",
 		}
 	}
 
@@ -20,6 +22,7 @@ impl Arch {
 		match self {
 			Self::X86_64 => "x86_64-unknown-none",
 			Self::AArch64 => "aarch64-unknown-none-softfloat",
+			Self::Riscv64 => "riscv64gc-unknown-none-elf",
 		}
 	}
 
@@ -27,6 +30,7 @@ impl Arch {
 		match self {
 			Arch::X86_64 => "x86_64-unknown-hermit",
 			Arch::AArch64 => "aarch64-unknown-hermit",
+			Arch::Riscv64 => "riscv64gc-unknown-hermit",
 		}
 	}
 
@@ -39,6 +43,11 @@ impl Arch {
 			],
 			Arch::AArch64 => &[
 				"--target=aarch64-unknown-hermit",
+				"-Zbuild-std=core",
+				"-Zbuild-std-features=compiler-builtins-mem",
+			],
+			Arch::Riscv64 => &[
+				"--target=riscv64gc-unknown-hermit",
 				"-Zbuild-std=core",
 				"-Zbuild-std-features=compiler-builtins-mem",
 			],
@@ -55,6 +64,11 @@ impl Arch {
 				"-Zbuild-std=core,alloc",
 				"-Zbuild-std-features=compiler-builtins-mem",
 			],
+			Self::Riscv64 => &[
+				"--target=riscv64gc-unknown-none-elf",
+				"-Zbuild-std=core,alloc",
+				"-Zbuild-std-features=compiler-builtins-mem",
+			],
 		}
 	}
 
@@ -62,6 +76,7 @@ impl Arch {
 		match self {
 			Self::X86_64 => &[],
 			Self::AArch64 => &["-Crelocation-model=pic"],
+			Self::Riscv64 => &["-Cno-redzone", "-Crelocation-model=pic"],
 		}
 	}
 }
@@ -73,6 +88,7 @@ impl FromStr for Arch {
 		match s {
 			"x86_64" => Ok(Self::X86_64),
 			"aarch64" => Ok(Self::AArch64),
+			"riscv64" => Ok(Self::Riscv64),
 			s => Err(anyhow!("Unsupported arch: {s}")),
 		}
 	}
