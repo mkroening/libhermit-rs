@@ -14,6 +14,7 @@ pub use crate::arch::kernel::{
 	get_base_address, get_cmdline, get_cmdsize, get_image_size, get_ram_address, get_tls_align,
 	get_tls_filesz, get_tls_memsz, get_tls_start,
 };
+#[cfg(not(target_arch = "riscv64"))]
 use crate::kernel::boot_info;
 
 static CLI: OnceCell<Cli> = OnceCell::new();
@@ -33,7 +34,15 @@ struct Cli {
 
 /// Whether HermitCore is running under the "uhyve" hypervisor.
 pub fn is_uhyve() -> bool {
-	matches!(boot_info().platform_info, PlatformInfo::Uhyve { .. })
+	#[cfg(not(target_arch = "riscv64"))]
+	{
+		matches!(boot_info().platform_info, PlatformInfo::Uhyve { .. })
+	}
+
+	#[cfg(target_arch = "riscv64")]
+	{
+		false
+	}
 }
 
 fn get_cmdline_str() -> &'static str {
