@@ -134,6 +134,12 @@ float-cmp = "0.9"
 num-traits = { version = "0.2", default-features = false }
 x86 = { version = "0.52", default-features = false }
 
+[target.'cfg(target_arch = "riscv64")'.dependencies]
+riscv = "0.10"
+trapframe = "0.9"
+fdt = "0.1"
+tock-registers = "0.8"
+
 [workspace]
 members = [
 	"xtask",

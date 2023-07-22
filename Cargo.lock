@@ -210,6 +210,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fdt"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "784a4df722dc6267a04af36895398f59d21d07dce47232adf31ec0ff2fa45e67"
+
+[[package]]
 name = "float-cmp"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -353,6 +359,7 @@ dependencies = [
  "bitflags 2.3.3",
  "crossbeam-utils",
  "dyn-clone",
+ "fdt",
  "float-cmp",
  "hashbrown",
  "hermit-dtb",
@@ -370,11 +377,13 @@ dependencies = [
  "pflock",
  "qemu-exit",
  "rand_chacha",
+ "riscv",
  "shell-words",
  "smoltcp",
  "talc",
  "time",
  "tock-registers",
+ "trapframe",
  "uart_16550",
  "x86",
  "x86_64",
@@ -915,6 +924,16 @@ name = "tock-registers"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "696941a0aee7e276a165a978b37918fd5d22c55c3d6bda197813070ca9c0f21c"
+
+[[package]]
+name = "trapframe"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f287ee70169f5bfddba441baf901b620e3655f16fa7815f48a7e100ec6d86a8f"
+dependencies = [
+ "raw-cpuid",
+ "x86_64",
+]
 
 [[package]]
 name = "uart_16550"
