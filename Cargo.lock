@@ -383,6 +383,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6999dc1837253364c2ebb0704ba97994bd874e8f195d665c50b7548f6ea92764"
 
 [[package]]
+name = "fdt"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "784a4df722dc6267a04af36895398f59d21d07dce47232adf31ec0ff2fa45e67"
+
+[[package]]
 name = "flate2"
 version = "1.0.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -498,6 +504,7 @@ dependencies = [
  "bitflags 2.4.0",
  "crossbeam-utils",
  "dyn-clone",
+ "fdt",
  "float-cmp",
  "hashbrown",
  "hermit-dtb",
@@ -515,6 +522,8 @@ dependencies = [
  "pflock",
  "qemu-exit",
  "rand_chacha",
+ "riscv",
+ "sbi",
  "shell-words",
  "smallvec",
  "smoltcp",
@@ -522,6 +531,7 @@ dependencies = [
  "talc",
  "time",
  "tock-registers",
+ "trapframe",
  "uart_16550",
  "x86",
  "x86_64",
@@ -1070,6 +1080,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ffc183a10b4478d04cbbbfc96d0873219d962dd5accaff2ffbd4ceb7df837f4"
 
 [[package]]
+name = "sbi"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "29cb0870400aca7e4487e8ec1e93f9d4288da763cb1da2cedc5102e62b6522ad"
+
+[[package]]
 name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1293,6 +1309,16 @@ name = "tock-registers"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "696941a0aee7e276a165a978b37918fd5d22c55c3d6bda197813070ca9c0f21c"
+
+[[package]]
+name = "trapframe"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f287ee70169f5bfddba441baf901b620e3655f16fa7815f48a7e100ec6d86a8f"
+dependencies = [
+ "raw-cpuid",
+ "x86_64",
+]
 
 [[package]]
 name = "uart_16550"
