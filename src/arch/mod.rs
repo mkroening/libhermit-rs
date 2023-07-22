@@ -2,6 +2,9 @@
 #[cfg(target_arch = "aarch64")]
 pub mod aarch64;
 
+#[cfg(target_arch = "riscv64")]
+pub mod riscv64;
+
 #[cfg(target_arch = "x86_64")]
 pub mod x86_64;
 
@@ -33,6 +36,29 @@ pub use crate::arch::aarch64::kernel::{
 };
 #[cfg(target_arch = "aarch64")]
 pub use crate::arch::aarch64::*;
+#[cfg(all(target_arch = "riscv64", feature = "smp"))]
+pub use crate::arch::riscv64::kernel::application_processor_init;
+#[cfg(target_arch = "riscv64")]
+pub use crate::arch::riscv64::kernel::core_local;
+#[cfg(target_arch = "riscv64")]
+pub use crate::arch::riscv64::kernel::interrupts;
+#[cfg(target_arch = "riscv64")]
+pub use crate::arch::riscv64::kernel::processor;
+#[cfg(target_arch = "riscv64")]
+pub use crate::arch::riscv64::kernel::processor::{set_oneshot_timer, wakeup_core};
+#[cfg(target_arch = "riscv64")]
+pub use crate::arch::riscv64::kernel::scheduler;
+#[cfg(target_arch = "riscv64")]
+pub use crate::arch::riscv64::kernel::switch;
+#[cfg(target_arch = "riscv64")]
+pub use crate::arch::riscv64::kernel::systemtime::get_boot_time;
+#[cfg(target_arch = "riscv64")]
+pub use crate::arch::riscv64::kernel::{
+	boot_application_processors, boot_processor_init, get_processor_count, message_output_init,
+	output_message_buf,
+};
+#[cfg(target_arch = "riscv64")]
+pub use crate::arch::riscv64::*;
 #[cfg(target_arch = "x86_64")]
 pub use crate::arch::x86_64::kernel::apic::{set_oneshot_timer, wakeup_core};
 #[cfg(all(target_arch = "x86_64", target_os = "none", feature = "smp"))]
@@ -71,6 +97,13 @@ pub(crate) fn memory_barrier() {
 	unsafe {
 		asm!("dmb ish", options(nostack, nomem, preserves_flags),);
 	}
+}
+
+#[allow(dead_code)]
+#[cfg(target_arch = "riscv64")]
+#[inline(always)]
+pub(crate) fn memory_barrier() {
+	unsafe { riscv::asm::sfence_vma_all() }
 }
 
 /// Force strict CPU ordering, serializes load and store operations.
