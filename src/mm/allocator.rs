@@ -69,14 +69,20 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn empty() {
-		let mut allocator = GlobalAllocator::empty();
-		let layout = Layout::from_size_align(1, 1).unwrap();
-		// we have 4 kbyte static memory
-		assert!(allocator.allocate(layout.clone()).is_ok());
+	fn basic() {
+		const SIZE: usize = 0x1000;
+		static mut ARENA: [u8; SIZE] = [0; SIZE];
 
-		let layout = Layout::from_size_align(0x1000, mem::align_of::<usize>());
-		let addr = allocator.allocate(layout.unwrap());
-		assert!(addr.is_err());
+		let mut allocator = LockedAllocator::empty();
+		unsafe {
+			allocator.init(ARENA.as_mut_ptr(), SIZE);
+		}
+
+		let layout = Layout::from_size_align(1, 1).unwrap();
+		assert!(unsafe { !allocator.alloc(layout.clone()).is_null() });
+
+		let layout = Layout::from_size_align(0x1000, mem::align_of::<usize>()).unwrap();
+		let addr = unsafe { allocator.alloc(layout) };
+		assert!(addr.is_null());
 	}
 }
