@@ -115,7 +115,7 @@ fn trivial_test() {
 
 #[cfg(target_os = "none")]
 #[global_allocator]
-static ALLOCATOR: LockedAllocator = LockedAllocator::empty();
+static mut ALLOCATOR: LockedAllocator = LockedAllocator::empty();
 
 /// Interface to allocate memory from system heap
 ///

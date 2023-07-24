@@ -2,11 +2,13 @@
 use core::slice;
 use core::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
+use align_address::Align;
 use hermit_entry::boot_info::{BootInfo, PlatformInfo, RawBootInfo};
 use hermit_sync::InterruptSpinMutex;
 use x86::controlregs::{cr0, cr0_write, cr4, Cr0};
 
 use self::serial::SerialPort;
+use crate::arch::mm::paging::{BasePageSize, PageSize};
 use crate::arch::mm::{PhysAddr, VirtAddr};
 use crate::arch::x86_64::kernel::core_local::*;
 use crate::env::{self, is_uhyve};
@@ -320,6 +322,13 @@ unsafe extern "C" fn pre_init(boot_info: &'static RawBootInfo, cpu_id: u32) -> !
 	}
 
 	if cpu_id == 0 {
+		// Assume that we can use the first page after the kernel as startup heap
+		let heap_start = (get_base_address().as_usize() + get_image_size())
+			.align_up(BasePageSize::SIZE as usize);
+		unsafe {
+			crate::ALLOCATOR.init(heap_start as *mut u8, BasePageSize::SIZE as usize);
+		}
+
 		crate::boot_processor_main()
 	} else {
 		#[cfg(not(feature = "smp"))]

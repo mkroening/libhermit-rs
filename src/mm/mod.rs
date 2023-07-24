@@ -1,3 +1,8 @@
+#![allow(dead_code)]
+#![allow(unused_mut)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+
 pub mod allocator;
 pub mod freelist;
 
@@ -134,65 +139,43 @@ pub fn init() {
 	{
 		info!("A pure Rust application is running on top of HermitCore!");
 
-		// At first, we map only a small part into the heap.
-		// Afterwards, we already use the heap and map the rest into
-		// the virtual address space.
+		// At first, we map only to the next supported huge/large page boundary
+		// Afterwards, the rest of the heap will be mapped into the kernel.
+		// We prefer to map huge/large pages to avoid TLB misses.
 
+		let mut counter = 0;
 		let virt_size: usize =
 			(available_memory - stack_reserve).align_down(LargePageSize::SIZE as usize);
-
-		let virt_addr = if has_1gib_pages && virt_size > HugePageSize::SIZE as usize {
-			arch::mm::virtualmem::allocate_aligned(
-				virt_size.align_up(HugePageSize::SIZE as usize),
-				HugePageSize::SIZE as usize,
-			)
-			.unwrap()
-		} else {
-			arch::mm::virtualmem::allocate_aligned(virt_size, LargePageSize::SIZE as usize).unwrap()
-		};
-
+		heap_start_addr = (env::get_base_address() + env::get_image_size()).align_up_to_base_page();
+		let mut virt_addr =
+			arch::mm::virtualmem::allocate_aligned(virt_size, BasePageSize::SIZE as usize).unwrap();
 		info!(
 			"Heap: size {} MB, start address {:p}",
-			virt_size >> 20,
-			virt_addr
+			(virt_size - (virt_addr.as_usize() - heap_start_addr.as_usize())) >> 20,
+			heap_start_addr
 		);
 
-		// try to map a huge page
-		let mut counter = if has_1gib_pages && virt_size > HugePageSize::SIZE as usize {
-			paging::map_heap::<HugePageSize>(virt_addr, 1);
-			HugePageSize::SIZE as usize
-		} else {
-			0
-		};
-
-		if counter == 0 && has_2mib_pages {
-			// fall back to large pages
-			paging::map_heap::<LargePageSize>(virt_addr, 1);
-			counter = LargePageSize::SIZE as usize;
+		// map LargePages the next HugePageSize boundary
+		#[cfg(target_arch = "x86_64")]
+		if has_1gib_pages
+			&& virt_addr % HugePageSize::SIZE != 0
+			&& virt_size - counter * BasePageSize::SIZE as usize > HugePageSize::SIZE as usize
+		{
+			let no_large_pages = (virt_addr.align_up_to_huge_page().as_usize()
+				- virt_addr.as_usize())
+				/ LargePageSize::SIZE as usize;
+			paging::map_heap::<LargePageSize>(virt_addr, no_large_pages);
+			virt_addr = virt_addr.align_up_to_huge_page();
+			counter +=
+				no_large_pages * (LargePageSize::SIZE as usize / BasePageSize::SIZE as usize);
 		}
 
-		if counter == 0 {
-			// fall back to normal pages, but map at least the size of a large page
-			paging::map_heap::<BasePageSize>(
-				virt_addr,
-				LargePageSize::SIZE as usize / BasePageSize::SIZE as usize,
-			);
-			counter = LargePageSize::SIZE as usize;
-		}
-
-		heap_start_addr = virt_addr;
-		unsafe {
-			crate::ALLOCATOR.init(virt_addr.as_mut_ptr(), virt_size);
-		}
-
-		map_addr = virt_addr + counter;
-		map_size = virt_size - counter;
+		map_addr = virt_addr;
+		map_size = virt_size - counter * BasePageSize::SIZE as usize;
 	}
 
-	if has_1gib_pages
-		&& map_size > HugePageSize::SIZE as usize
-		&& map_addr.as_usize().align_down(HugePageSize::SIZE as usize) == 0
-	{
+	#[cfg(target_arch = "x86_64")]
+	if has_1gib_pages && map_size > HugePageSize::SIZE as usize {
 		let size = map_size.align_down(HugePageSize::SIZE as usize);
 		paging::map_heap::<HugePageSize>(map_addr, size / HugePageSize::SIZE as usize);
 		map_size -= size;
@@ -214,6 +197,12 @@ pub fn init() {
 	}
 
 	let heap_end_addr = map_addr;
+	unsafe {
+		crate::ALLOCATOR.extend(
+			heap_start_addr.as_mut_ptr(),
+			heap_end_addr.as_usize() - heap_start_addr.as_usize(),
+		);
+	}
 
 	let heap_addr_range = heap_start_addr..heap_end_addr;
 	info!("Heap is located at {heap_addr_range:#x?} ({map_size} Bytes unmapped)");
