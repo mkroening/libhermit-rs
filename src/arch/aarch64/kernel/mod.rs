@@ -17,11 +17,11 @@ use core::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use align_address::Align;
 use hermit_entry::boot_info::{BootInfo, RawBootInfo};
 
-use crate::arch::mm::paging::{BasePageSize, PageSize};
 use crate::arch::aarch64::kernel::core_local::*;
 use crate::arch::aarch64::kernel::serial::SerialPort;
 pub use crate::arch::aarch64::kernel::systemtime::get_boot_time;
 use crate::arch::aarch64::mm::{PhysAddr, VirtAddr};
+use crate::arch::mm::paging::{BasePageSize, PageSize};
 use crate::env;
 
 const SERIAL_PORT_BAUDRATE: u32 = 115200;
@@ -191,7 +191,8 @@ pub fn output_message_buf(buf: &[u8]) {
 /// Real Boot Processor initialization as soon as we have put the first Welcome message on the screen.
 pub fn boot_processor_init() {
 	// Assume that we can use the first page after the kernel as startup heap
-	let heap_start = (get_base_address().as_usize() + get_image_size()).align_up(BasePageSize::SIZE as usize);
+	let heap_start =
+		(get_base_address().as_usize() + get_image_size()).align_up(BasePageSize::SIZE as usize);
 	unsafe {
 		crate::ALLOCATOR.init(heap_start as *mut u8, BasePageSize::SIZE as usize);
 	}
