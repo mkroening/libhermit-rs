@@ -69,7 +69,7 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn basic() {
+	fn empty() {
 		const SIZE: usize = 0x1000;
 		static mut ARENA: [u8; SIZE] = [0; SIZE];
 
