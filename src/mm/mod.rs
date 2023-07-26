@@ -159,7 +159,7 @@ pub fn init() {
 		#[cfg(target_arch = "x86_64")]
 		if has_1gib_pages
 			&& virt_addr % HugePageSize::SIZE != 0
-			&& virt_size - counter * BasePageSize::SIZE as usize > HugePageSize::SIZE as usize
+			&& virt_size.align_down(HugePageSize::SIZE as usize) > HugePageSize::SIZE as usize
 		{
 			let no_large_pages = (virt_addr.align_up_to_huge_page().as_usize()
 				- virt_addr.as_usize())
@@ -170,26 +170,37 @@ pub fn init() {
 				no_large_pages * (LargePageSize::SIZE as usize / BasePageSize::SIZE as usize);
 		}
 
+		unsafe {
+			crate::ALLOCATOR.extend(
+				heap_start_addr.as_mut_ptr(),
+				virt_addr.as_usize() - heap_start_addr.as_usize(),
+			);
+		}
+
 		map_addr = virt_addr;
 		map_size = virt_size - counter * BasePageSize::SIZE as usize;
 	}
 
 	#[cfg(target_arch = "x86_64")]
-	if has_1gib_pages && map_size > HugePageSize::SIZE as usize {
+	if has_1gib_pages
+		&& map_size.align_down(HugePageSize::SIZE as usize) > HugePageSize::SIZE as usize
+	{
 		let size = map_size.align_down(HugePageSize::SIZE as usize);
 		paging::map_heap::<HugePageSize>(map_addr, size / HugePageSize::SIZE as usize);
 		map_size -= size;
 		map_addr += size;
 	}
 
-	if has_2mib_pages && map_size > LargePageSize::SIZE as usize {
+	if has_2mib_pages
+		&& map_size.align_down(LargePageSize::SIZE as usize) > LargePageSize::SIZE as usize
+	{
 		let size = map_size.align_down(LargePageSize::SIZE as usize);
 		paging::map_heap::<LargePageSize>(map_addr, size / LargePageSize::SIZE as usize);
 		map_size -= size;
 		map_addr += size;
 	}
 
-	if map_size > BasePageSize::SIZE as usize {
+	if map_size.align_down(BasePageSize::SIZE as usize) > BasePageSize::SIZE as usize {
 		let size = map_size.align_down(BasePageSize::SIZE as usize);
 		paging::map_heap::<BasePageSize>(map_addr, size / BasePageSize::SIZE as usize);
 		map_size -= size;
