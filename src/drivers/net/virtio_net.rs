@@ -540,7 +540,23 @@ impl NetworkDriver for VirtioNetDriver {
 
 	/// Returns the current MTU of the device.
 	fn get_mtu(&self) -> u16 {
-		self.mtu
+		if self
+			.dev_cfg
+			.features
+			.is_feature(Features::VIRTIO_NET_F_GUEST_TSO4)
+			| self
+				.dev_cfg
+				.features
+				.is_feature(Features::VIRTIO_NET_F_GUEST_TSO6)
+			| self
+				.dev_cfg
+				.features
+				.is_feature(Features::VIRTIO_NET_F_GUEST_UFO)
+		{
+			u16::MAX
+		} else {
+			self.mtu
+		}
 	}
 
 	fn has_packet(&self) -> bool {
@@ -584,8 +600,15 @@ impl NetworkDriver for VirtioNetDriver {
 						let protocol = unsafe { *(buff_ptr.offset((14+9).try_into().unwrap()) as *const u8) };
 						if protocol == 6 /* TCP */ {
 							header.flags = NetHdrFlag::VIRTIO_NET_HDR_F_NEEDS_CSUM;
-							header.csum_start = 14+20;
+							header.csum_start = (smoltcp::wire::ETHERNET_HEADER_LEN+smoltcp::wire::IPV4_HEADER_LEN).try_into().unwrap();
 							header.csum_offset = 16;
+
+							if len + smoltcp::wire::ETHERNET_HEADER_LEN  > self.mtu.into() {
+								info!("HH {}", len);
+								header.gso_type = 	NetHdrGSO::VIRTIO_NET_HDR_GSO_TCPV4;
+								header.hdr_len = (smoltcp::wire::ETHERNET_HEADER_LEN + smoltcp::wire::IPV4_HEADER_LEN + smoltcp::wire::TCP_HEADER_LEN).try_into().unwrap();
+								header.gso_size = (usize::from(self.mtu) - smoltcp::wire::IPV4_HEADER_LEN - smoltcp::wire::TCP_HEADER_LEN).try_into().unwrap();
+							}
 						} else if protocol == 17 /* UDP */ {
 							header.flags = NetHdrFlag::VIRTIO_NET_HDR_F_NEEDS_CSUM;
 							header.csum_start = 14+20;
@@ -596,8 +619,14 @@ impl NetworkDriver for VirtioNetDriver {
 						let protocol = unsafe { *(buff_ptr.offset((14+9).try_into().unwrap()) as *const u8) };
 						if protocol == 6 /* TCP */ {
 							header.flags = NetHdrFlag::VIRTIO_NET_HDR_F_NEEDS_CSUM;
-							header.csum_start = 14+40;
+							header.csum_start = (smoltcp::wire::ETHERNET_HEADER_LEN+smoltcp::wire::IPV6_HEADER_LEN).try_into().unwrap();
 							header.csum_offset = 16;
+
+							if len + smoltcp::wire::ETHERNET_HEADER_LEN  > self.mtu.into() {
+								header.gso_type = NetHdrGSO::VIRTIO_NET_HDR_GSO_TCPV6;
+								header.hdr_len = (smoltcp::wire::ETHERNET_HEADER_LEN + smoltcp::wire::IPV6_HEADER_LEN + smoltcp::wire::TCP_HEADER_LEN).try_into().unwrap();
+								header.gso_size = (usize::from(self.mtu) - smoltcp::wire::IPV6_HEADER_LEN - smoltcp::wire::TCP_HEADER_LEN).try_into().unwrap();
+							}
 						} else if protocol == 17 /* UDP */ {
 							header.flags = NetHdrFlag::VIRTIO_NET_HDR_F_NEEDS_CSUM;
 							header.csum_start = 14+40;
@@ -855,13 +884,9 @@ impl VirtioNetDriver {
 		feats.push(Features::VIRTIO_F_RING_PACKED);
 		// Avoid the creation of checksums
 		feats.push(Features::VIRTIO_NET_F_GUEST_CSUM);
-
-		// Currently the driver does NOT support the features below.
-		// In order to provide functionality for these, the driver
-		// needs to take care of calculating checksum in
-		// RxQueues.post_processing()
-		// feats.push(Features::VIRTIO_NET_F_GUEST_TSO4);
-		// feats.push(Features::VIRTIO_NET_F_GUEST_TSO6);
+		// Add support of TCP segmentation offload
+		feats.push(Features::VIRTIO_NET_F_GUEST_TSO4);
+		feats.push(Features::VIRTIO_NET_F_GUEST_TSO6);
 
 		// Negotiate features with device. Automatically reduces selected feats in order to meet device capabilities.
 		// Aborts in case incompatible features are selected by the driver or the device does not support min_feat_set.
