@@ -603,7 +603,7 @@ impl NetworkDriver for VirtioNetDriver {
 							header.csum_start = (smoltcp::wire::ETHERNET_HEADER_LEN+smoltcp::wire::IPV4_HEADER_LEN).try_into().unwrap();
 							header.csum_offset = 16;
 
-							if len + smoltcp::wire::ETHERNET_HEADER_LEN  > self.mtu.into() {
+							if len - smoltcp::wire::ETHERNET_HEADER_LEN  > self.mtu.into() {
 								header.gso_type = 	NetHdrGSO::VIRTIO_NET_HDR_GSO_TCPV4;
 								header.hdr_len = (smoltcp::wire::ETHERNET_HEADER_LEN + smoltcp::wire::IPV4_HEADER_LEN + smoltcp::wire::TCP_HEADER_LEN).try_into().unwrap();
 								header.gso_size = (usize::from(self.mtu) - smoltcp::wire::IPV4_HEADER_LEN - smoltcp::wire::TCP_HEADER_LEN).try_into().unwrap();
@@ -621,7 +621,7 @@ impl NetworkDriver for VirtioNetDriver {
 							header.csum_start = (smoltcp::wire::ETHERNET_HEADER_LEN+smoltcp::wire::IPV6_HEADER_LEN).try_into().unwrap();
 							header.csum_offset = 16;
 
-							if len + smoltcp::wire::ETHERNET_HEADER_LEN  > self.mtu.into() {
+							if len - smoltcp::wire::ETHERNET_HEADER_LEN  > self.mtu.into() {
 								header.gso_type = NetHdrGSO::VIRTIO_NET_HDR_GSO_TCPV6;
 								header.hdr_len = (smoltcp::wire::ETHERNET_HEADER_LEN + smoltcp::wire::IPV6_HEADER_LEN + smoltcp::wire::TCP_HEADER_LEN).try_into().unwrap();
 								header.gso_size = (usize::from(self.mtu) - smoltcp::wire::IPV6_HEADER_LEN - smoltcp::wire::TCP_HEADER_LEN).try_into().unwrap();
