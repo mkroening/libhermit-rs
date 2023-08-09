@@ -1,8 +1,8 @@
 use alloc::vec::Vec;
 use core::arch::asm;
-use core::cell::RefMut;
+use core::sync::atomic::Ordering;
 
-use crate::arch::riscv64::kernel::BOOT_INFO;
+use crate::arch::riscv64::kernel::CURRENT_CORE_LOCAL;
 use crate::executor::task::AsyncTask;
 use crate::scheduler::{CoreId, PerCoreScheduler};
 
@@ -132,9 +132,9 @@ pub(crate) fn async_tasks() -> Vec<AsyncTask> {
 pub fn init() {
 	unsafe {
 		// Store the address to the CoreLocal structure allocated for this core in gp.
-		let mut address = core::ptr::read_volatile(&(*BOOT_INFO).current_percore_address);
-		if address == 0 {
-			address = &CORE_LOCAL as *const _ as u64;
+		let mut address = CURRENT_CORE_LOCAL.load(Ordering::Relaxed);
+		if address.is_null() {
+			address = &mut CORE_LOCAL;
 		}
 
 		asm!(

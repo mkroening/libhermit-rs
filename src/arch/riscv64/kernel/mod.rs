@@ -14,6 +14,7 @@ pub mod systemtime;
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use core::sync::atomic::{AtomicPtr, Ordering};
 use core::{fmt, intrinsics, mem, ptr};
 
 use riscv::register::{fcsr, sstatus};
@@ -109,6 +110,7 @@ impl fmt::Debug for BootInfo {
 
 /// Kernel header to announce machine features
 static mut BOOT_INFO: *mut BootInfo = ptr::null_mut();
+static CURRENT_CORE_LOCAL: AtomicPtr<CoreLocal> = AtomicPtr::new(ptr::null_mut());
 
 // FUNCTIONS
 
@@ -315,23 +317,20 @@ pub fn init_next_processor_variables(core_id: CoreId) {
 	// Keep the stack executable to possibly support dynamically generated code on the stack (see https://security.stackexchange.com/a/47825).
 	let stack = physicalmem::allocate(KERNEL_STACK_SIZE)
 		.expect("Failed to allocate boot stack for new core");
-	let boxed_percore = Box::new(CoreLocal::new(core_id));
+	let boxed_core_local = Box::new(CoreLocal::new(core_id));
 	//let boxed_irq = Box::new(IrqStatistics::new());
 	//let boxed_irq_raw = Box::into_raw(boxed_irq);
 
 	unsafe {
 		//IRQ_COUNTERS.insert(core_id, &(*boxed_irq_raw));
-		//boxed_percore.irq_statistics = CoreLocalVariable::new(boxed_irq_raw);
+		//boxed_core_local.irq_statistics = CoreLocalVariable::new(boxed_irq_raw);
 
 		core::ptr::write_volatile(&mut (*BOOT_INFO).current_stack_address, stack.as_u64());
-		core::ptr::write_volatile(
-			&mut (*BOOT_INFO).current_percore_address,
-			Box::into_raw(boxed_percore) as u64,
-		);
+		let current_core_local = Box::into_raw(boxed_core_local);
+		CURRENT_CORE_LOCAL.store(current_core_local, Ordering::Relaxed);
 
 		info!(
-			"Initialize per core data at 0x{:x} (size {} bytes)",
-			core::ptr::read_volatile(&(*BOOT_INFO).current_percore_address),
+			"Initialize per core data at {current_core_local:p} (size {} bytes)",
 			mem::size_of::<CoreLocal>()
 		);
 	}
