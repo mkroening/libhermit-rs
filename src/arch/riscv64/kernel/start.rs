@@ -7,7 +7,7 @@ use crate::arch::riscv64::kernel::processor;
 use crate::arch::riscv64::kernel::{BootInfo, BOOT_INFO};
 use crate::KERNEL_STACK_SIZE;
 
-use super::CPU_ONLINE;
+use super::{CPU_ONLINE, CURRENT_BOOT_ID};
 
 //static mut BOOT_STACK: [u8; KERNEL_STACK_SIZE] = [0; KERNEL_STACK_SIZE];
 
@@ -36,7 +36,7 @@ unsafe fn pre_init(hart_id: usize, boot_info: &'static mut BootInfo) -> ! {
 
 	// info!("Welcome to hermit kernel.");
 
-	core::ptr::write_volatile(&mut (*BOOT_INFO).current_boot_id, hart_id as u32);
+	CURRENT_BOOT_ID.store(hart_id as u32, Ordering::Relaxed);
 
 	if CPU_ONLINE.load(Ordering::Acquire) == 0 {
 		crate::boot_processor_main()

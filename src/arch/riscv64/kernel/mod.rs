@@ -30,7 +30,6 @@ use crate::env;
 use crate::scheduler::CoreId;
 
 const SERIAL_PORT_BAUDRATE: u32 = 115200;
-const BOOTINFO_MAGIC_NUMBER: u32 = 0xC0DE_CAFEu32;
 
 static mut COM1: SerialPort = SerialPort::new(0x9000000);
 
@@ -112,6 +111,7 @@ impl fmt::Debug for BootInfo {
 static mut BOOT_INFO: *mut BootInfo = ptr::null_mut();
 static CURRENT_CORE_LOCAL: AtomicPtr<CoreLocal> = AtomicPtr::new(ptr::null_mut());
 static CPU_ONLINE: AtomicU32 = AtomicU32::new(0);
+static CURRENT_BOOT_ID: AtomicU32 = AtomicU32::new(0);
 
 // FUNCTIONS
 
@@ -192,7 +192,7 @@ pub fn get_timebase_freq() -> u64 {
 }
 
 pub fn get_current_boot_id() -> u32 {
-	unsafe { core::ptr::read_volatile(&(*BOOT_INFO).current_boot_id) }
+	CURRENT_BOOT_ID.load(Ordering::Relaxed)
 }
 
 /// Earliest initialization function called by the Boot Processor.
