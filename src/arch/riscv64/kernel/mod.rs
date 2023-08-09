@@ -12,6 +12,7 @@ mod start;
 pub mod switch;
 pub mod systemtime;
 
+pub use hermit_entry::BootInfo;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::sync::atomic::{AtomicPtr, Ordering, AtomicU32};
@@ -36,76 +37,6 @@ static mut COM1: SerialPort = SerialPort::new(0x9000000);
 // Used to store information about available harts. The index of the hart in the vector
 // represents its CpuId and does not need to match its hart_id
 pub static mut HARTS_AVAILABLE: Vec<usize> = Vec::new();
-
-#[repr(C)]
-struct BootInfo {
-	pub magic_number: u32,
-	pub version: u32,
-	pub base: u64,
-	pub ram_start: u64,
-	pub limit: u64,
-	pub image_size: u64,
-	pub tls_start: u64,
-	pub tls_filesz: u64,
-	pub tls_memsz: u64,
-	pub tls_align: u64,
-	pub current_stack_address: u64,
-	pub current_percore_address: u64,
-	pub host_logical_addr: u64,
-	pub boot_gtod: u64,
-	pub cmdline: u64,
-	pub cmdsize: u64,
-	pub cpu_freq: u32,
-	pub boot_processor: u32,
-	pub cpu_online: u32,
-	pub possible_cpus: u32,
-	pub current_boot_id: u32,
-	pub uartport: u32,
-	pub single_kernel: u8,
-	pub uhyve: u8,
-	pub hcip: [u8; 4],
-	pub hcgateway: [u8; 4],
-	pub hcmask: [u8; 4],
-	pub dtb_ptr: u64,
-	pub hart_mask: u64,
-	pub timebase_freq: u64,
-}
-
-impl fmt::Debug for BootInfo {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		writeln!(f, "magic_number {:#x}", self.magic_number)?;
-		writeln!(f, "version {:#x}", self.version)?;
-		writeln!(f, "base {:#x}", self.base)?;
-		writeln!(f, "ram address {:#x}", self.ram_start)?;
-		writeln!(f, "limit {:#x}", self.limit)?;
-		writeln!(f, "tls_start {:#x}", self.tls_start)?;
-		writeln!(f, "tls_filesz {:#x}", self.tls_filesz)?;
-		writeln!(f, "tls_memsz {:#x}", self.tls_memsz)?;
-		writeln!(f, "tls_align {:#x}", self.tls_align)?;
-		writeln!(f, "image_size {:#x}", self.image_size)?;
-		writeln!(f, "current_stack_address {:#x}", self.current_stack_address)?;
-		writeln!(
-			f,
-			"current_percore_address {:#x}",
-			self.current_percore_address
-		)?;
-		writeln!(f, "host_logical_addr {:#x}", self.host_logical_addr)?;
-		writeln!(f, "boot_gtod {:#x}", self.boot_gtod)?;
-		writeln!(f, "cmdline {:#x}", self.cmdline)?;
-		writeln!(f, "cmdsize {:#x}", self.cmdsize)?;
-		writeln!(f, "cpu_freq {}", self.cpu_freq)?;
-		writeln!(f, "boot_processor {}", self.boot_processor)?;
-		writeln!(f, "cpu_online {}", self.cpu_online)?;
-		writeln!(f, "possible_cpus {}", self.possible_cpus)?;
-		writeln!(f, "current_boot_id {}", self.current_boot_id)?;
-		writeln!(f, "uartport {:#x}", self.uartport)?;
-		writeln!(f, "single_kernel {}", self.single_kernel)?;
-		writeln!(f, "uhyve {}", self.uhyve)?;
-		writeln!(f, "dtb_ptr {:x}", self.dtb_ptr)?;
-		writeln!(f, "hart_mask {:x}", self.hart_mask)?;
-		writeln!(f, "timebase_freq {}", self.timebase_freq)
-	}
-}
 
 /// Kernel header to announce machine features
 static mut BOOT_INFO: *mut BootInfo = ptr::null_mut();
@@ -168,7 +99,9 @@ pub fn get_tls_align() -> usize {
 
 /// Whether HermitCore is running under the "uhyve" hypervisor.
 pub fn is_uhyve() -> bool {
-	unsafe { core::ptr::read_volatile(&(*BOOT_INFO).uhyve) != 0 }
+	false
+	// TODO
+	// unsafe { core::ptr::read_volatile(&(*BOOT_INFO).uhyve) != 0 }
 }
 
 pub fn get_cmdsize() -> usize {
