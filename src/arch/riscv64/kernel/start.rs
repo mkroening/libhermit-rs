@@ -3,7 +3,7 @@ use core::mem;
 
 #[cfg(not(feature = "smp"))]
 use crate::arch::riscv64::kernel::processor;
-use crate::arch::riscv64::kernel::{BootInfo, BOOTINFO_MAGIC_NUMBER, BOOT_INFO};
+use crate::arch::riscv64::kernel::{BootInfo, BOOT_INFO};
 use crate::KERNEL_STACK_SIZE;
 
 //static mut BOOT_STACK: [u8; KERNEL_STACK_SIZE] = [0; KERNEL_STACK_SIZE];
@@ -32,7 +32,6 @@ unsafe fn pre_init(hart_id: usize, boot_info: &'static mut BootInfo) -> ! {
 	BOOT_INFO = boot_info as *mut BootInfo;
 
 	// info!("Welcome to hermit kernel.");
-	assert_eq!(boot_info.magic_number, BOOTINFO_MAGIC_NUMBER);
 
 	core::ptr::write_volatile(&mut (*BOOT_INFO).current_boot_id, hart_id as u32);
 
