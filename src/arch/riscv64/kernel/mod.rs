@@ -14,7 +14,7 @@ pub mod systemtime;
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use core::sync::atomic::{AtomicPtr, Ordering};
+use core::sync::atomic::{AtomicPtr, Ordering, AtomicU32};
 use core::{fmt, intrinsics, mem, ptr};
 
 use riscv::register::{fcsr, sstatus};
@@ -111,6 +111,7 @@ impl fmt::Debug for BootInfo {
 /// Kernel header to announce machine features
 static mut BOOT_INFO: *mut BootInfo = ptr::null_mut();
 static CURRENT_CORE_LOCAL: AtomicPtr<CoreLocal> = AtomicPtr::new(ptr::null_mut());
+static CPU_ONLINE: AtomicU32 = AtomicU32::new(0);
 
 // FUNCTIONS
 
@@ -132,12 +133,12 @@ pub fn get_limit() -> usize {
 
 #[cfg(feature = "smp")]
 pub fn get_possible_cpus() -> u32 {
-	unsafe { core::ptr::read_volatile(&(*BOOT_INFO).cpu_online) as u32 }
+	CPU_ONLINE.load(Ordering::Relaxed)
 }
 
 #[cfg(feature = "smp")]
 pub fn get_processor_count() -> u32 {
-	unsafe { core::ptr::read_volatile(&(*BOOT_INFO).cpu_online) as u32 }
+	CPU_ONLINE.load(Ordering::Relaxed)
 }
 
 #[cfg(not(feature = "smp"))]
@@ -287,9 +288,9 @@ fn finish_processor_init() {
 			next_hart_id
 		);
 
-		// Changing cpu_online will cause uhyve to start the next processor
 		unsafe {
-			let _ = intrinsics::atomic_xadd_seqcst(&mut (*BOOT_INFO).cpu_online as *mut u32, 1);
+			// TODO: Old: Changing cpu_online will cause uhyve to start the next processor
+			CPU_ONLINE.fetch_add(1, Ordering::Release);
 
 			//When running bare-metal/QEMU we use the firmware to start the next hart
 			if !is_uhyve() {
@@ -303,9 +304,7 @@ fn finish_processor_init() {
 		}
 	} else {
 		info!("All processors are initialized");
-		unsafe {
-			let _ = intrinsics::atomic_xadd_seqcst(&mut (*BOOT_INFO).cpu_online as *mut u32, 1);
-		}
+		CPU_ONLINE.fetch_add(1, Ordering::Release);
 	}
 }
 
