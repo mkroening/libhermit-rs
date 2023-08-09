@@ -168,11 +168,6 @@ pub fn is_uhyve() -> bool {
 	unsafe { core::ptr::read_volatile(&(*BOOT_INFO).uhyve) != 0 }
 }
 
-/// Whether HermitCore is running alone (true) or side-by-side to Linux in Multi-Kernel mode (false).
-pub fn is_single_kernel() -> bool {
-	unsafe { core::ptr::read_volatile(&(*BOOT_INFO).single_kernel) != 0 }
-}
-
 pub fn get_cmdsize() -> usize {
 	unsafe { core::ptr::read_volatile(&(*BOOT_INFO).cmdsize) as usize }
 }
