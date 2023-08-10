@@ -12,12 +12,12 @@ mod start;
 pub mod switch;
 pub mod systemtime;
 
-pub use hermit_entry::BootInfo;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
-use core::sync::atomic::{AtomicPtr, Ordering, AtomicU32};
+use core::sync::atomic::{AtomicPtr, AtomicU32, Ordering, AtomicU64};
 use core::{fmt, intrinsics, mem, ptr};
 
+use hermit_entry::boot_info::{BootInfo, PlatformInfo, RawBootInfo};
 use riscv::register::{fcsr, sstatus};
 
 use crate::arch::riscv64::kernel::core_local::*;
@@ -39,10 +39,13 @@ static mut COM1: SerialPort = SerialPort::new(0x9000000);
 pub static mut HARTS_AVAILABLE: Vec<usize> = Vec::new();
 
 /// Kernel header to announce machine features
-static mut BOOT_INFO: *mut BootInfo = ptr::null_mut();
+static mut BOOT_INFO: Option<BootInfo> = None;
+static mut RAW_BOOT_INFO: *const RawBootInfo = ptr::null_mut();
 static CURRENT_CORE_LOCAL: AtomicPtr<CoreLocal> = AtomicPtr::new(ptr::null_mut());
 static CPU_ONLINE: AtomicU32 = AtomicU32::new(0);
 static CURRENT_BOOT_ID: AtomicU32 = AtomicU32::new(0);
+static HART_MASK: AtomicU64 = AtomicU64::new(0);
+static CURRENT_STACK_ADDRESS: AtomicU64 = AtomicU64::new(0);
 
 // FUNCTIONS
 
@@ -51,15 +54,48 @@ pub fn is_uhyve_with_pci() -> bool {
 }
 
 pub fn get_ram_address() -> PhysAddr {
-	unsafe { PhysAddr(core::ptr::read_volatile(&(*BOOT_INFO).ram_start)) }
+	unsafe {
+		PhysAddr(
+			BOOT_INFO
+				.as_ref()
+				.unwrap()
+				.hardware_info
+				.phys_addr_range
+				.start,
+		)
+	}
 }
 
 pub fn get_image_size() -> usize {
-	unsafe { core::ptr::read_volatile(&(*BOOT_INFO).image_size) as usize }
+	unsafe {
+		(BOOT_INFO
+			.as_ref()
+			.unwrap()
+			.load_info
+			.kernel_image_addr_range
+			.end - BOOT_INFO
+			.as_ref()
+			.unwrap()
+			.load_info
+			.kernel_image_addr_range
+			.start) as usize
+	}
 }
 
 pub fn get_limit() -> usize {
-	unsafe { core::ptr::read_volatile(&(*BOOT_INFO).limit) as usize }
+	unsafe {
+		(BOOT_INFO
+			.as_ref()
+			.unwrap()
+			.hardware_info
+			.phys_addr_range
+			.end - BOOT_INFO
+			.as_ref()
+			.unwrap()
+			.hardware_info
+			.phys_addr_range
+			.start) as usize
+	}
 }
 
 #[cfg(feature = "smp")]
@@ -78,23 +114,66 @@ pub fn get_processor_count() -> u32 {
 }
 
 pub fn get_base_address() -> VirtAddr {
-	unsafe { VirtAddr(core::ptr::read_volatile(&(*BOOT_INFO).base)) }
+	unsafe {
+		VirtAddr(
+			BOOT_INFO
+				.as_ref()
+				.unwrap()
+				.load_info
+				.kernel_image_addr_range
+				.start,
+		)
+	}
 }
 
 pub fn get_tls_start() -> VirtAddr {
-	unsafe { VirtAddr(core::ptr::read_volatile(&(*BOOT_INFO).tls_start)) }
+	unsafe {
+		VirtAddr(
+			BOOT_INFO
+				.as_ref()
+				.unwrap()
+				.load_info
+				.tls_info
+				.unwrap()
+				.start,
+		)
+	}
 }
 
 pub fn get_tls_filesz() -> usize {
-	unsafe { core::ptr::read_volatile(&(*BOOT_INFO).tls_filesz) as usize }
+	unsafe {
+		BOOT_INFO
+			.as_ref()
+			.unwrap()
+			.load_info
+			.tls_info
+			.unwrap()
+			.filesz as usize
+	}
 }
 
 pub fn get_tls_memsz() -> usize {
-	unsafe { core::ptr::read_volatile(&(*BOOT_INFO).tls_memsz) as usize }
+	unsafe {
+		BOOT_INFO
+			.as_ref()
+			.unwrap()
+			.load_info
+			.tls_info
+			.unwrap()
+			.memsz as usize
+	}
 }
 
 pub fn get_tls_align() -> usize {
-	unsafe { core::ptr::read_volatile(&(*BOOT_INFO).tls_align) as usize }
+	unsafe {
+		BOOT_INFO
+			.as_ref()
+			.unwrap()
+			.load_info
+			.tls_info
+			.unwrap()
+			.align as usize
+	}
 }
 
 /// Whether HermitCore is running under the "uhyve" hypervisor.
@@ -105,23 +184,53 @@ pub fn is_uhyve() -> bool {
 }
 
 pub fn get_cmdsize() -> usize {
-	unsafe { core::ptr::read_volatile(&(*BOOT_INFO).cmdsize) as usize }
+	unsafe {
+		match BOOT_INFO.as_ref().unwrap().platform_info {
+			PlatformInfo::Riscv64 { command_line, .. } => {
+				command_line.map(|s| s.len()).unwrap_or(0)
+			}
+			PlatformInfo::Uhyve { .. } => todo!(),
+			PlatformInfo::LinuxBootParams { .. } => todo!(),
+		}
+	}
 }
 
 pub fn get_cmdline() -> VirtAddr {
-	VirtAddr(unsafe { core::ptr::read_volatile(&(*BOOT_INFO).cmdline) })
+	unsafe {
+		match BOOT_INFO.as_ref().unwrap().platform_info {
+			PlatformInfo::Riscv64 { command_line, .. } => VirtAddr(
+				command_line
+					.map(|s| s.as_ptr())
+					.unwrap_or(core::ptr::null()) as u64,
+			),
+			PlatformInfo::Uhyve { .. } => todo!(),
+			PlatformInfo::LinuxBootParams { .. } => todo!(),
+		}
+	}
 }
 
 pub fn get_dtb_ptr() -> *const u8 {
-	unsafe { core::ptr::read_volatile(&(*BOOT_INFO).dtb_ptr) as *const u8 }
+	unsafe {
+		match BOOT_INFO.as_ref().unwrap().platform_info {
+			PlatformInfo::Riscv64 { dtb_ptr, .. } => dtb_ptr as *const u8,
+			PlatformInfo::Uhyve { .. } => todo!(),
+			PlatformInfo::LinuxBootParams { .. } => todo!(),
+		}
+	}
 }
 
 pub fn get_hart_mask() -> u64 {
-	unsafe { core::ptr::read_volatile(&(*BOOT_INFO).hart_mask) }
+	HART_MASK.load(Ordering::Relaxed)
 }
 
 pub fn get_timebase_freq() -> u64 {
-	unsafe { core::ptr::read_volatile(&(*BOOT_INFO).timebase_freq) as u64 }
+	unsafe {
+		match BOOT_INFO.as_ref().unwrap().platform_info {
+			PlatformInfo::Riscv64 { timebase_freq, .. } => timebase_freq,
+			PlatformInfo::Uhyve { .. } => todo!(),
+			PlatformInfo::LinuxBootParams { .. } => todo!(),
+		}
+	}
 }
 
 pub fn get_current_boot_id() -> u32 {
@@ -205,9 +314,7 @@ fn finish_processor_init() {
 
 	// Remove current hart from the hart_mask
 	let new_hart_mask = get_hart_mask() & (u64::MAX - (1 << current_hart_id));
-	unsafe {
-		core::ptr::write_volatile(&mut (*BOOT_INFO).hart_mask, new_hart_mask);
-	}
+	HART_MASK.store(new_hart_mask, Ordering::Relaxed);
 
 	let next_hart_index = lsb(new_hart_mask);
 
@@ -230,7 +337,7 @@ fn finish_processor_init() {
 				let ret = sbi::sbi_hart_start(
 					next_hart_id as usize,
 					_start as *const () as usize,
-					BOOT_INFO as usize,
+					RAW_BOOT_INFO as usize,
 				);
 				debug!("sbi_hart_start: {:?}", ret);
 			}
@@ -257,7 +364,7 @@ pub fn init_next_processor_variables(core_id: CoreId) {
 		//IRQ_COUNTERS.insert(core_id, &(*boxed_irq_raw));
 		//boxed_core_local.irq_statistics = CoreLocalVariable::new(boxed_irq_raw);
 
-		core::ptr::write_volatile(&mut (*BOOT_INFO).current_stack_address, stack.as_u64());
+		CURRENT_STACK_ADDRESS.store(stack.as_u64(), Ordering::Relaxed);
 		let current_core_local = Box::into_raw(boxed_core_local);
 		CURRENT_CORE_LOCAL.store(current_core_local, Ordering::Relaxed);
 
