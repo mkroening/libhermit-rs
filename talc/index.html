@@ -1,0 +1,297 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Talc"><title>talc - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="talc" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (9d83ac217 2023-10-31)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-9dd44ab47b99a0fb.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../talc/index.html">talc</a><span class="version">3.1.1</span></h2></div><div class="sidebar-elems"><ul class="block">
+            <li><a id="all-types" href="all.html">All Items</a></li></ul><section><ul class="block"><li><a href="#structs">Structs</a></li><li><a href="#traits">Traits</a></li></ul></section></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Crate <a class="mod" href="#">talc</a><button id="copy-path" title="Copy item path to clipboard"><img src="../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="src" href="../src/talc/lib.rs.html#1-985">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="talc"><a href="#talc">Talc</a></h2>
+<p><a href="https://crates.io/crates/talc"><img src="https://img.shields.io/crates/v/talc?style=flat-square&amp;color=orange" alt="Crates.io" /></a> <img src="https://img.shields.io/crates/d/talc?style=flat-square" alt="Downloads" /> <a href="https://docs.rs/talc/latest/talc/"><img src="https://img.shields.io/docsrs/talc?style=flat-square" alt="docs.rs" /></a> <a href="https://github.com/SFBdragon/talc/blob/master/LICENSE.md"><img src="https://img.shields.io/crates/l/talc?style=flat-square" alt="License" /></a></p>
+<p>Talc is a performant and flexible memory allocator, with first class support for <code>no_std</code> and WebAssembly. It’s suitable for projects such as operating system kernels, website backends, or arena allocation in single-threaded contexts.</p>
+<p>Is your project targeting WASM? Check out <a href="./README_WASM.md">usage and comparisons here</a>.</p>
+<h4 id="table-of-contents"><a href="#table-of-contents">Table of Contents</a></h4>
+<ul>
+<li><a href="#setup">Setup</a></li>
+<li><a href="#benchmarks">Benchmarks</a></li>
+<li><a href="#algorithm">Algorithm</a></li>
+<li><a href="#testing">Testing</a></li>
+<li><a href="#general-usage">General Usage</a></li>
+<li><a href="#advanced-usage">Advanced Usage</a></li>
+<li><a href="#conditional-features">Conditional Features</a></li>
+<li><a href="#stable-rust-and-msrv">Stable Rust and MSRV</a></li>
+<li><a href="#support-me">Support Me</a></li>
+<li><a href="#changelog">Changelog</a></li>
+</ul>
+<h3 id="setup"><a href="#setup">Setup</a></h3>
+<p>Use it as an arena allocator via the <code>Allocator</code> API as follows:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#![feature(allocator_api)]
+</span><span class="kw">use </span>talc::<span class="kw-2">*</span>;
+<span class="kw">use </span>core::alloc::{Allocator, Layout};
+
+<span class="kw">static </span><span class="kw-2">mut </span>ARENA: [u8; <span class="number">10000</span>] = [<span class="number">0</span>; <span class="number">10000</span>];
+
+<span class="kw">fn </span>main () {
+    <span class="kw">let </span>talck = Talc::new(ErrOnOom).lock::&lt;spin::Mutex&lt;()&gt;&gt;();
+    <span class="kw">unsafe </span>{ talck.<span class="number">0</span>.lock().claim(ARENA.as_mut().into()); }
+    
+    talck.allocator().allocate(Layout::new::&lt;[u32; <span class="number">16</span>]&gt;());
+}</code></pre></div>
+<p>Or as a global allocator:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#![feature(const_mut_refs)]
+</span><span class="kw">use </span>talc::<span class="kw-2">*</span>;
+
+<span class="kw">static </span><span class="kw-2">mut </span>ARENA: [u8; <span class="number">10000</span>] = [<span class="number">0</span>; <span class="number">10000</span>];
+
+<span class="attr">#[global_allocator]
+</span><span class="kw">static </span>ALLOCATOR: Talck&lt;spin::Mutex&lt;()&gt;, ClaimOnOom&gt; = Talc::new(<span class="kw">unsafe </span>{
+    <span class="comment">// if we&#39;re in a hosted environment, the Rust runtime may allocate before
+    // main() is called, so we need to initialize the arena automatically
+    </span>ClaimOnOom::new(Span::from_array(<span class="kw-2">&amp;mut </span>ARENA))
+}).lock();
+
+<span class="kw">fn </span>main() {
+    <span class="kw">let </span><span class="kw-2">mut </span>vec = Vec::with_capacity(<span class="number">100</span>);
+    vec.extend(<span class="number">0</span>..<span class="number">300usize</span>);
+}</code></pre></div>
+<p>See <a href="#general-usage">General Usage</a> and <a href="#advanced-usage">Advanced Usage</a> for more details.</p>
+<h3 id="benchmarks"><a href="#benchmarks">Benchmarks</a></h3><h4 id="macrobenchmarks-based-on-gallocs-benchmarks"><a href="#macrobenchmarks-based-on-gallocs-benchmarks">Macrobenchmarks (based on galloc’s benchmarks)</a></h4>
+<p>The original benchmarks have been modified (e.g. replacing <code>rand</code> with <code>fastrand</code>) in order to alleviate the overhead. Additionally, alignment requirements are inversely exponentially frequent, ranging from 2^2 bytes to 2^18, with 2^2 and 2^3 being most common.</p>
+<h5 id="random-actions-benchmark-results"><a href="#random-actions-benchmark-results">Random Actions Benchmark Results</a></h5>
+<p>The number of successful allocations, deallocations, and reallocations within the allotted time.</p>
+<p><img src="/benchmark_graphs/random_actions.png" alt="Random Actions Benchmark Results" /></p>
+<p>Note that these results are sensitive to the allocation sizes, ratio of allocations to deallocations, and other such factors.</p>
+<h5 id="heap-efficiency-benchmark-results"><a href="#heap-efficiency-benchmark-results">Heap Efficiency Benchmark Results</a></h5>
+<p>The average occupied capacity upon first allocation failure when randomly allocating/deallocating/reallocating.</p>
+<div><table><thead><tr><th>Allocator</th><th>Average Random Actions Heap Efficiency</th></tr></thead><tbody>
+<tr><td>dlmalloc</td><td>99.07%</td></tr>
+<tr><td>talc</td><td>98.87%</td></tr>
+<tr><td>linked_list_allocator</td><td>98.28%</td></tr>
+<tr><td>galloc</td><td>95.86%</td></tr>
+<tr><td>buddy_alloc</td><td>58.75%</td></tr>
+</tbody></table>
+</div><h4 id="microbenchmarks-based-on-simple_chunk_allocators-benchmark"><a href="#microbenchmarks-based-on-simple_chunk_allocators-benchmark">Microbenchmarks (based on simple_chunk_allocator’s benchmark)</a></h4>
+<p>Pre-fail allocations account for all allocations up until the first allocation failure, at which point heap pressure has become a major factor. Some allocators deal with heap pressure better than others, and many applications aren’t concerned with such cases (where allocation failure results in a panic), hence they are separated out for separate consideration. Actual number of pre-fail allocations can be quite noisy due to random allocation sizes.</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code>RESULTS OF BENCHMARK: Talc
+ <span class="number">1980717 </span>allocation attempts, <span class="number">1397166 </span>successful allocations,   <span class="number">27321 </span>pre-fail allocations, <span class="number">1386546 </span>deallocations
+            CATEGORY | OCTILE <span class="number">0       1       2       3       4       5       6       7       8 </span>| AVERAGE
+---------------------|--------------------------------------------------------------------------|---------
+     All Allocations |       <span class="number">42      63      63      84      84     105     126     210   31752 </span>|     <span class="number">137   </span>ticks
+Pre-Fail Allocations |       <span class="number">42      63      84      84      84     105     105     126    3465 </span>|     <span class="number">105   </span>ticks
+       Deallocations |       <span class="number">42      84      84     105     210     252     294     420   34062 </span>|     <span class="number">239   </span>ticks
+
+RESULTS OF BENCHMARK: Buddy Allocator
+ <span class="number">2181289 </span>allocation attempts, <span class="number">1534468 </span>successful allocations,   <span class="number">19225 </span>pre-fail allocations, <span class="number">1527694 </span>deallocations
+            CATEGORY | OCTILE <span class="number">0       1       2       3       4       5       6       7       8 </span>| AVERAGE
+---------------------|--------------------------------------------------------------------------|---------
+     All Allocations |       <span class="number">21      42      42      63      63      63      63      63  288414 </span>|      <span class="number">59   </span>ticks
+Pre-Fail Allocations |       <span class="number">21      42      42      42      63      63      63      84  288414 </span>|      <span class="number">79   </span>ticks
+       Deallocations |       <span class="number">42      63      63      63      63      84      84     126   21945 </span>|      <span class="number">95   </span>ticks
+
+RESULTS OF BENCHMARK: Dlmalloc
+ <span class="number">1963524 </span>allocation attempts, <span class="number">1391789 </span>successful allocations,   <span class="number">26241 </span>pre-fail allocations, <span class="number">1380568 </span>deallocations
+            CATEGORY | OCTILE <span class="number">0       1       2       3       4       5       6       7       8 </span>| AVERAGE
+---------------------|--------------------------------------------------------------------------|---------
+     All Allocations |       <span class="number">42      63      84     147     168     189     210     315   25557 </span>|     <span class="number">179   </span>ticks
+Pre-Fail Allocations |       <span class="number">42      63     105     147     168     189     210     294    2289 </span>|     <span class="number">173   </span>ticks
+       Deallocations |       <span class="number">42     105     126     210     252     294     378     441   62958 </span>|     <span class="number">280   </span>ticks
+
+RESULTS OF BENCHMARK: Galloc
+  <span class="number">274406 </span>allocation attempts,  <span class="number">200491 </span>successful allocations,   <span class="number">24503 </span>pre-fail allocations,  <span class="number">190673 </span>deallocations
+            CATEGORY | OCTILE <span class="number">0       1       2       3       4       5       6       7       8 </span>| AVERAGE
+---------------------|--------------------------------------------------------------------------|---------
+     All Allocations |       <span class="number">42      63      84     273   12327   27489   42441   46263  110145 </span>|   <span class="number">19458   </span>ticks
+Pre-Fail Allocations |       <span class="number">42      42      42      63      63      63      63     861   22344 </span>|     <span class="number">730   </span>ticks
+       Deallocations |       <span class="number">42      63      84     168     231     273     399     756   27153 </span>|     <span class="number">322   </span>ticks
+
+RESULTS OF BENCHMARK: Linked List Allocator
+  <span class="number">133404 </span>allocation attempts,  <span class="number">103843 </span>successful allocations,   <span class="number">25115 </span>pre-fail allocations,   <span class="number">93590 </span>deallocations
+            CATEGORY | OCTILE <span class="number">0       1       2       3       4       5       6       7       8 </span>| AVERAGE
+---------------------|--------------------------------------------------------------------------|---------
+     All Allocations |       <span class="number">42    4263    9618   16212   24297   35028   47502   59724  729666 </span>|   <span class="number">29867   </span>ticks
+Pre-Fail Allocations |       <span class="number">42     819    2310    4095    6426    9198   12810   17955  836325 </span>|   <span class="number">11266   </span>ticks
+       Deallocations |       <span class="number">42    3234    7056   11298   16338   22218   29442   39039  117957 </span>|   <span class="number">19519   </span>ticks</code></pre></div>
+<p>Q: Why does Buddy Allocator perform much better here than in the random actions benchmark? </p>
+<p>A: The buddy allocator’s performance is heavily dependant on the size of allocations in random actions, as it doesn’t appear to reallocate efficiently. The microbenchmark results only measure allocation and deallocation, with no regard to reallocation. (The currently-used sizes of 1 to 20000 bytes leads to the results above in Random Actions.)</p>
+<h3 id="algorithm"><a href="#algorithm">Algorithm</a></h3>
+<p>This is a dlmalloc-style linked list allocator with boundary tagging and bucketing, aimed at general-purpose use cases. Allocation is O(n) worst case, while in-place reallocations and deallocations are O(1).</p>
+<p>The main differences compared to Galloc, using a similar algorithm, is that Talc doesn’t bucket by alignment at all, assuming most allocations will require at most a machine-word size alignment. Instead, a much broader range of bucket sizes are used, which should often be more efficient.</p>
+<p>Additionally, the layout of chunk metadata is rearranged to allow for smaller minimum-size chunks to reduce memory overhead of small allocations. The minimum chunk size is <code>3 * usize</code>, with a single <code>usize</code> being reserved per allocation.</p>
+<h3 id="testing"><a href="#testing">Testing</a></h3>
+<p>Tests on most of the helper types and Talc functions.</p>
+<p>Other than that, lots of fuzzing of the allocator.</p>
+<h3 id="general-usage"><a href="#general-usage">General Usage</a></h3>
+<p>Here is the list of <code>Talc</code> methods:</p>
+<ul>
+<li>Constructors:
+<ul>
+<li><code>new</code></li>
+</ul>
+</li>
+<li>Information:
+<ul>
+<li><code>get_allocated_span</code> - returns the minimum span containing all allocated memory</li>
+</ul>
+</li>
+<li>Management:
+<ul>
+<li><code>claim</code> - claim memory to establishing a new heap</li>
+<li><code>extend</code> - extend the extent of a heap</li>
+<li><code>truncate</code> - reduce the extent of a heap</li>
+<li><code>lock</code> - wraps the <code>Talc</code> in a <code>Talck</code>, which supports the <code>GlobalAlloc</code> and <code>Allocator</code> APIs</li>
+</ul>
+</li>
+<li>Allocation:
+<ul>
+<li><code>malloc</code></li>
+<li><code>free</code></li>
+<li><code>grow</code></li>
+<li><code>shrink</code></li>
+</ul>
+</li>
+</ul>
+<p>Read their <a href="https://docs.rs/talc/latest/talc/struct.Talc.html">documentation</a> for more info.</p>
+<p><a href="https://docs.rs/talc/latest/talc/struct.Span.html"><code>Span</code></a> is a handy little type for describing memory regions, because trying to manipulate <code>Range&lt;*mut u8&gt;</code> or <code>*mut [u8]</code> or <code>base_ptr</code>-<code>size</code> pairs tends to be inconvenient or annoying.</p>
+<h3 id="advanced-usage"><a href="#advanced-usage">Advanced Usage</a></h3>
+<p>The most powerful feature of the allocator is that it has a modular OOM handling system, allowing you to fail out of or recover from allocation failure easily. </p>
+<p>As an example, recovering by extending the heap is implemented below.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>talc::<span class="kw-2">*</span>;
+
+<span class="kw">struct </span>MyOomHandler {
+    heap: Span,
+}
+
+<span class="kw">impl </span>OomHandler <span class="kw">for </span>MyOomHandler {
+    <span class="kw">fn </span>handle_oom(talc: <span class="kw-2">&amp;mut </span>Talc&lt;<span class="self">Self</span>&gt;, layout: core::alloc::Layout) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
+        <span class="comment">// alloc doesn&#39;t have enough memory, and we just got called! we must free up some memory
+        // we&#39;ll go through an example of how to handle this situation
+    
+        // we can inspect `layout` to estimate how much we should free up for this allocation
+        // or we can extend by any amount (increasing powers of two has good time complexity)
+        // creating another heap would also work, but this isn&#39;t covered here
+    
+        // this function will be repeatedly called until we free up enough memory or 
+        // we return Err(()) causing allocation failure. Be careful to avoid conditions where 
+        // the heap isn&#39;t sufficiently extended indefinitely, causing an infinite loop
+    
+        // an arbitrary address limit for the sake of example
+        </span><span class="kw">const </span>HEAP_TOP_LIMIT: <span class="kw-2">*mut </span>u8 = <span class="number">0x80000000 </span><span class="kw">as </span><span class="kw-2">*mut </span>u8;
+    
+        <span class="kw">let </span>old_heap: Span = talc.oom_handler.heap;
+    
+        <span class="comment">// we&#39;re going to extend the heap upward, doubling its size
+        // but we&#39;ll be sure not to extend past the limit
+        </span><span class="kw">let </span>new_heap: Span = old_heap.extend(<span class="number">0</span>, old_heap.size()).below(HEAP_TOP_LIMIT);
+    
+        <span class="kw">if </span>new_heap == old_heap {
+            <span class="comment">// we won&#39;t be extending the heap, so we should return Err
+            </span><span class="kw">return </span><span class="prelude-val">Err</span>(());
+        }
+    
+        <span class="kw">unsafe </span>{
+            <span class="comment">// we&#39;re assuming the new memory up to HEAP_TOP_LIMIT is allocatable
+            </span>talc.oom_handler.heap = talc.extend(old_heap, new_heap);
+        }
+    
+        <span class="prelude-val">Ok</span>(())
+    }
+}</code></pre></div>
+<h3 id="conditional-features"><a href="#conditional-features">Conditional Features</a></h3>
+<ul>
+<li><code>lock_api</code> (default): Provides the <code>Talck</code> locking wrapper type that implements <code>GlobalAlloc</code>.</li>
+<li><code>allocator</code> (default, requires nightly): Provides an <code>Allocator</code> trait implementation via <code>Talck</code>.</li>
+<li><code>nightly_api</code> (default, requires nightly): Provides the <code>Span::from(*mut [T])</code> and <code>Span::from_slice</code> functions.</li>
+</ul>
+<h3 id="stable-rust-and-msrv"><a href="#stable-rust-and-msrv">Stable Rust and MSRV</a></h3>
+<p>Talc can be built on stable Rust by using <code>--no-default-features --features=lock_api</code> (<code>lock_api</code> isn’t strictly necessary). </p>
+<p>The MSRV is currently 1.67.1</p>
+<h3 id="support-me"><a href="#support-me">Support Me</a></h3>
+<p>If you find the project useful, please consider donating via <a href="https://www.paypal.com/donate/?hosted_button_id=8CSQ92VV58VPQ">Paypal</a>. Thanks!</p>
+<p>On the other hand, I’m looking for part-time programming work for which South Africans are eligible. If you know of any suitable vacancies, please get in touch. <a href="https://www.linkedin.com/in/shaun-beautement-9101a823b/">Here’s my LinkedIn.</a></p>
+<h3 id="changelog"><a href="#changelog">Changelog</a></h3><h5 id="v311"><a href="#v311">v3.1.1</a></h5>
+<ul>
+<li>Changed the WASM OOM handler’s behavior to be more robust if other code calls <code>memory.grow</code> during the allocator’s use.</li>
+</ul>
+<h5 id="v310"><a href="#v310">v3.1.0</a></h5>
+<ul>
+<li>Reduced use of nightly-only features, and feature-gated the remainder (<code>Span::from(*mut [T])</code> and <code>Span::from_slice</code>) behind <code>nightly_api</code>.</li>
+<li><code>nightly_api</code> feature is default-enabled
+<ul>
+<li><em>WARNING:</em> use of <code>default-features = false</code> may cause unexpected errors if the gated functions are used. Consider adding <code>nightly_api</code> or using another function.</li>
+</ul>
+</li>
+</ul>
+<h5 id="v301"><a href="#v301">v3.0.1</a></h5>
+<ul>
+<li>Improved documentation</li>
+<li>Improved and updated benchmarks
+<ul>
+<li>Increased the range of allocation sizes on Random Actions. (sorry Buddy Allocator!)</li>
+<li>Increased the number of iterations the Heap Efficiency benchmark does to produce more accurate and stable values.</li>
+</ul>
+</li>
+</ul>
+<h5 id="v300"><a href="#v300">v3.0.0</a></h5>
+<ul>
+<li>Added support for multiple discontinuous heaps! This required some major API changes
+<ul>
+<li><code>new_arena</code> no longer exists (use <code>new</code> and then <code>claim</code>)</li>
+<li><code>init</code> has been replaced with <code>claim</code></li>
+<li><code>claim</code>, <code>extend</code> and <code>truncate</code> now return the new heap extent </li>
+<li><code>InitOnOom</code> is now <code>ClaimOnOom</code>. </li>
+<li>All of the above now have different behavior and documentation.</li>
+</ul>
+</li>
+<li>Each heap now has a fixed overhead of one <code>usize</code> at the bottom.</li>
+</ul>
+<p>To migrate from v2 to v3, keep in mind that you must keep track of the heaps if you want to resize them, by storing the returned <code>Span</code>s. Read <a href="https://docs.rs/talc/latest/talc/struct.Talc.html#method.claim"><code>claim</code></a>, <a href="https://docs.rs/talc/latest/talc/struct.Talc.html#method.extend"><code>extend</code></a> and <a href="https://docs.rs/talc/latest/talc/struct.Talc.html#method.truncate"><code>truncate</code></a>’s documentation for all the details.</p>
+<h5 id="v221"><a href="#v221">v2.2.1</a></h5>
+<ul>
+<li>Rewrote the allocator internals to place allocation metadata above the allocation.
+<ul>
+<li>This will have the largest impact on avoiding false sharing, where previously, the allocation metadata for one allocation would infringe on the cache-line of the allocation before it, even if a sufficiently high alignment was demanded. A marginal/negligible increase in single-threaded performance resulted, too.</li>
+</ul>
+</li>
+<li>Removed heap_exhaustion and replaced heap_efficiency benchmarks.</li>
+<li>Improved documentation and other resources.</li>
+<li>Changed the WASM size measurement to include slightly less overhead.</li>
+</ul>
+<h5 id="v220"><a href="#v220">v2.2.0</a></h5>
+<ul>
+<li>Added <code>dlmalloc</code> to the benchmarks.</li>
+<li>WASM should now be fully supported via <code>TalckWasm</code>. Let me know what breaks ;)
+<ul>
+<li>Find more details <a href="./README_WASM.md">here</a>.</li>
+</ul>
+</li>
+</ul>
+<h5 id="v210"><a href="#v210">v2.1.0</a></h5>
+<ul>
+<li>Tests are now passing on 32 bit targets.</li>
+<li>Documentation fixes and improvements for various items.</li>
+<li>Fixed using <code>lock_api</code> without <code>allocator</code>.</li>
+<li>Experimental WASM support has been added via <code>TalckWasm</code> on WASM targets.</li>
+</ul>
+<h5 id="v200"><a href="#v200">v2.0.0</a></h5>
+<ul>
+<li>Removed dependency on <code>spin</code> and switched to using <code>lock_api</code> (thanks <a href="https://github.com/stlankes">Stefan Lankes</a>)
+<ul>
+<li>You can specify the lock you want to use with <code>talc.lock::&lt;spin::Mutex&lt;()&gt;&gt;()</code> for example.</li>
+</ul>
+</li>
+<li>Removed the requirement that the <code>Talc</code> struct must not be moved, and removed the <code>mov</code> function.
+<ul>
+<li>The arena is now used to store metadata, so extremely small arenas will result in allocation failure.</li>
+</ul>
+</li>
+<li>Made the OOM handling system use generics and traits instead of a function pointer.
+<ul>
+<li>Use <code>ErrOnOom</code> to do what it says on the tin. <code>InitOnOom</code> is similar but inits to the given span if completely uninitialized. Implement <code>OomHandler</code> on any struct to implement your own behaviour (the OOM handler state can be accessed from <code>handle_oom</code> via <code>talc.oom_handler</code>).</li>
+</ul>
+</li>
+<li>Changed the API and internals of <code>Span</code> and other changes to pass <code>miri</code>’s Stacked Borrows checks.
+<ul>
+<li>Span now uses pointers exclusively and carries provenance.</li>
+</ul>
+</li>
+<li>Updated the benchmarks in a number of ways, notably adding <code>buddy_alloc</code> and removing <code>simple_chunk_allocator</code>.</li>
+</ul>
+</div></details><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2><ul class="item-table"><li><div class="item-name"><a class="struct" href="struct.AssumeUnlockable.html" title="struct talc::AssumeUnlockable">AssumeUnlockable</a></div><div class="desc docblock-short">A dummy RawMutex implementation to skip synchronization on single threaded systems.</div></li><li><div class="item-name"><a class="struct" href="struct.ClaimOnOom.html" title="struct talc::ClaimOnOom">ClaimOnOom</a></div><div class="desc docblock-short">An out-of-memory handler that attempts to claim the
+memory within the given <a href="struct.Span.html" title="struct talc::Span"><code>Span</code></a> upon OOM.</div></li><li><div class="item-name"><a class="struct" href="struct.ErrOnOom.html" title="struct talc::ErrOnOom">ErrOnOom</a></div><div class="desc docblock-short">Doesn’t handle out-of-memory conditions, immediate allocation error occurs.</div></li><li><div class="item-name"><a class="struct" href="struct.Span.html" title="struct talc::Span">Span</a></div><div class="desc docblock-short">Represents an interval of memory <code>[base, acme)</code></div></li><li><div class="item-name"><a class="struct" href="struct.Talc.html" title="struct talc::Talc">Talc</a></div><div class="desc docblock-short">The Talc Allocator!</div></li><li><div class="item-name"><a class="struct" href="struct.Talck.html" title="struct talc::Talck">Talck</a></div><div class="desc docblock-short">Talc lock: wrapper struct containing a mutex-locked <a href="struct.Talc.html" title="struct talc::Talc"><code>Talc</code></a>.</div></li><li><div class="item-name"><a class="struct" href="struct.TalckRef.html" title="struct talc::TalckRef">TalckRef</a></div><div class="desc docblock-short">A reference to a <a href="struct.Talck.html" title="struct talc::Talck"><code>Talck</code></a> that implements the <a href="https://doc.rust-lang.org/nightly/core/alloc/trait.Allocator.html" title="trait core::alloc::Allocator"><code>Allocator</code></a> trait.</div></li></ul><h2 id="traits" class="small-section-header"><a href="#traits">Traits</a></h2><ul class="item-table"><li><div class="item-name"><a class="trait" href="trait.OomHandler.html" title="trait talc::OomHandler">OomHandler</a></div></li></ul></section></div></main></body></html>
