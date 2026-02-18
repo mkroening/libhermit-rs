@@ -55,7 +55,7 @@ pub(crate) fn get_interrupt_handlers() -> HashMap<InterruptLine, InterruptHandle
 
 	#[cfg(feature = "virtio-fs")]
 	if let Some(drv) = get_filesystem_driver() {
-		fn fuse_handler() {
+		fn virtio_fs_handler() {
 			let Some(driver) = get_filesystem_driver() else {
 				return;
 			};
@@ -68,7 +68,7 @@ pub(crate) fn get_interrupt_handlers() -> HashMap<InterruptLine, InterruptHandle
 		handlers
 			.entry(irq_number)
 			.or_default()
-			.push_back(fuse_handler);
+			.push_back(virtio_fs_handler);
 	}
 
 	handlers
