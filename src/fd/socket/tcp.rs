@@ -423,8 +423,8 @@ impl ObjectInterface for Socket {
 			let mut guard = NIC.lock();
 			let nic = guard.as_nic_mut().unwrap();
 
-			for i in self.handle.iter() {
-				let socket = nic.get_mut_socket::<tcp::Socket<'_>>(*i);
+			for handle in self.handle.iter().copied() {
+				let socket = nic.get_mut_socket::<tcp::Socket<'_>>(handle);
 				socket.set_nagle_enabled(optval);
 			}
 
