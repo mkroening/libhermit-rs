@@ -4,12 +4,25 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   deploy_docs:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -30,9 +43,9 @@ jobs:
             </body>
           </html>
           EOL
-      - uses: crazy-max/ghaction-github-pages@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
         with:
-          target_branch: gh-pages
-          build_dir: target/x86_64-unknown-none/doc
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          path: target/x86_64-unknown-none/doc
+      - uses: actions/deploy-pages@v4
+        id: deployment
