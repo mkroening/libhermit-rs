@@ -1,4 +1,4 @@
-name: Publish Docs
+name: Deploy Docs
 
 on:
   push:
@@ -9,7 +9,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  publish_docs:
+  deploy_docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
