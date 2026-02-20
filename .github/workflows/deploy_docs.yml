@@ -30,20 +30,8 @@ jobs:
       - run: rustup target add x86_64-unknown-none
       - uses: dtolnay/install@cargo-docs-rs
       - run: cargo docs-rs --package hermit-kernel --target x86_64-unknown-none
-      - name: Generate index.html
-        run: |
-          cat > target/x86_64-unknown-none/doc/index.html <<EOL
-          <!doctype html>
-          <html>
-            <head>
-              <title>Redirect!</title>
-              <meta http-equiv="refresh" content="0; url=https://hermit-os.github.io/kernel/hermit/" />
-            </head>
-            <body>
-              <p><a href="https://hermit-os.github.io/kernel/hermit/">Redirect</a></p>
-            </body>
-          </html>
-          EOL
+      - name: Add HTML redirect to doc root
+        run: echo '<meta http-equiv="refresh" content="0;url=hermit">' > target/x86_64-unknown-none/doc/index.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
